@@ -1,0 +1,18 @@
+springdoc:
+  swagger-ui:
+    path: /api-docs
+    groups-order: DESC
+    tags-sorter: alpha
+    operationsSorter: method
+    disable-swagger-default-url: true
+    display-request-duration: true
+
+# prod 환경에서는 Swagger UI 비활성화
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+springdoc:
+  swagger-ui:
+    enabled: false
