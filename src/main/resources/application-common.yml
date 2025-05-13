@@ -1,0 +1,7 @@
+server:
+  port: 8080
+
+spring:
+  jackson:
+    mapper:
+      accept-case-insensitive-enums: true # Enum 대소문자 구분 없이 매핑
