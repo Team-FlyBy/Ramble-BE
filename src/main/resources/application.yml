@@ -4,4 +4,4 @@ spring:
 
   profiles:
     active: dev
-    include: common, swagger
+    include: common, swagger, secret
