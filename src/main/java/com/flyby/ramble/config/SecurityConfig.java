@@ -1,12 +1,16 @@
 package com.flyby.ramble.config;
 
+import com.flyby.ramble.jwt.JwtFilter;
+import com.flyby.ramble.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 
 import java.util.Collections;
@@ -15,6 +19,8 @@ import java.util.Collections;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtUtil jwtUtil;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -31,16 +37,21 @@ public class SecurityConfig {
                 }));
 
         // TODO : csrf, authorization 리스트 설정 변경
+        String[] list = {"/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**"};
 
         http
                 .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**"))
+                        .ignoringRequestMatchers(list))
                 .authorizeHttpRequests(requests -> requests
-                                .requestMatchers("/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                                .requestMatchers(list).permitAll()
                                 .anyRequest().authenticated()
                 )
                 .headers(headers -> headers
                         .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
+                )
+                .addFilterBefore(new JwtFilter(jwtUtil), UsernamePasswordAuthenticationFilter.class)
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 );
 
         return http.build();
