@@ -1,6 +1,7 @@
 package com.flyby.ramble.jwt;
 
 import com.flyby.ramble.model.Role;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -29,6 +30,24 @@ public class JwtUtil {
     public void init() {
         byte[] secretBytes = Base64.getDecoder().decode(secret);
         secretKey = Keys.hmacShaKeyFor(secretBytes);
+    }
+
+    public Claims parseClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
+
+    public boolean isExpired(String token) {
+        return Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getExpiration()
+                .before(new Date());
     }
 
     public String createToken(UUID userId, Role role, String tenantId) {
