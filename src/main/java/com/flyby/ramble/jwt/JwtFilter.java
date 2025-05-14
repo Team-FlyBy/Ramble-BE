@@ -11,12 +11,14 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
 
+@Component
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
 
@@ -32,9 +34,15 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-        authorizationToken = authorizationToken.substring(7);
+        authorizationToken = authorizationToken.substring(7).trim();
 
-        if (jwtUtil.isExpired(authorizationToken)) {
+        // TODO: 토큰 예외 처리 보완 필요
+        try {
+            if (jwtUtil.isExpired(authorizationToken)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+        } catch (Exception e) {
             filterChain.doFilter(request, response);
             return;
         }
