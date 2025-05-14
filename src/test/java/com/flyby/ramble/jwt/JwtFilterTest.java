@@ -62,8 +62,10 @@ class JwtFilterTest {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         assertThat(auth).isNotNull();
         assertThat(auth.getPrincipal()).isEqualTo(userId.toString());
-        assertThat(auth.getAuthorities().iterator().next().getAuthority()).isEqualTo(Role.USER.name());
+        assertThat(auth.getAuthorities().iterator().next().getAuthority()).isEqualTo("ROLE_" + Role.USER.name());
+
         verify(filterChain).doFilter(request, response);
+        SecurityContextHolder.clearContext();
     }
 
     @DisplayName("JWT 필터 테스트 - 토큰 X")
@@ -81,6 +83,14 @@ class JwtFilterTest {
         // 필터 체인이 호출되었는지 확인
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         assertThat(auth).isNull();
+
+        verify(filterChain).doFilter(request, response);
+        SecurityContextHolder.clearContext();
     }
 
+    // TODO:
+    //  1. 만료된 토큰 처리
+    //  2. 유효하지 않은 서명을 가진 토큰 처리
+    //  3. 잘못된 형식의 토큰 처리
+    //  4. 필수 클레임이 누락된 토큰 처리
 }
