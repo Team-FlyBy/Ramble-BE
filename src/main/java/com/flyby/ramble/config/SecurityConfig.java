@@ -1,7 +1,6 @@
 package com.flyby.ramble.config;
 
 import com.flyby.ramble.jwt.JwtFilter;
-import com.flyby.ramble.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
