@@ -9,6 +9,9 @@ import lombok.*;
 @Table(name = "users")
 public class User extends BaseEntity {
 
+    // TODO: validation 필요 (email 등)
+    // TODO: age, gender 추가 필요
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user_id")
@@ -21,16 +24,16 @@ public class User extends BaseEntity {
     private String email;
 
     @Enumerated(EnumType.STRING)
-    private Platform platform;
+    private OAuthProvider provider;
 
     @Enumerated(EnumType.STRING)
     private Role role;
 
     @Builder
-    public User(String userName, String email, Platform platform, Role role) {
+    public User(String userName, String email, OAuthProvider provider, Role role) {
         this.userName = userName;
         this.email = email;
-        this.platform = platform;
+        this.provider = provider;
         this.role = role;
     }
 
