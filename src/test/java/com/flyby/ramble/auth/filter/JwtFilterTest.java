@@ -1,5 +1,8 @@
-package com.flyby.ramble.jwt;
+package com.flyby.ramble.auth.filter;
 
+import com.flyby.ramble.auth.util.JwtUtil;
+import com.flyby.ramble.model.DeviceType;
+import com.flyby.ramble.model.OAuthProvider;
 import com.flyby.ramble.model.Role;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +50,7 @@ class JwtFilterTest {
     @Test
     void doFilterInternal_validToken() throws Exception {
         // given
-        String token = jwtUtil.createToken(userId, Role.USER, "testTenantId");
+        String token = jwtUtil.createToken(userId, Role.USER, DeviceType.ANDROID, OAuthProvider.GOOGLE, "");
 
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("Authorization", "Bearer " + token);
@@ -58,7 +61,6 @@ class JwtFilterTest {
         jwtFilter.doFilterInternal(request, response, filterChain);
 
         // then
-        // 필터 체인이 호출되었는지 확인
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         assertThat(auth).isNotNull();
         assertThat(auth.getPrincipal()).isEqualTo(userId.toString());
