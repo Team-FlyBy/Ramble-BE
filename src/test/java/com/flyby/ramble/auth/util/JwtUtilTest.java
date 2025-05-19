@@ -38,8 +38,6 @@ class JwtUtilTest {
 
         Instant now = Instant.now();
 
-        System.out.println(token);
-
         Claims claims = jwtUtil.parseClaims(token);
         assertThat(claims.getSubject()).isEqualTo(uuid.toString());
         assertThat(claims.get("role", String.class)).isEqualTo("ROLE_" + Role.USER.name());
