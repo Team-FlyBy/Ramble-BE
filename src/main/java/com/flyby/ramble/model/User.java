@@ -8,12 +8,7 @@ import java.util.UUID;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "users",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_provider", columnNames = "provider"),
-                @UniqueConstraint(name = "uk_provider_id", columnNames = "provider_id")
-        }
-)
+@Table(name = "users")
 public class User extends BaseEntity {
 
     // TODO: validation 필요 (email 등)
