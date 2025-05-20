@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -30,22 +31,40 @@ public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHa
     public void onAuthenticationSuccess(HttpServletRequest request,
                                         HttpServletResponse response,
                                         Authentication authentication) throws IOException, ServletException {
-        OidcUser oidc = (OidcUser) authentication.getPrincipal();
+        if (!(authentication.getPrincipal() instanceof OidcUser oidc)) {
+            throw new IllegalArgumentException("인증 주체가 OidcUser 타입이 아닙니다.");
+        }
         OidcIdToken idToken = oidc.getIdToken();
 
         Map<String, Object> claims = new HashMap<>(idToken.getClaims());
         String userId = claims.get("userId").toString();
         String provider = claims.get("provider").toString();
-        String providerId = idToken.getSubject();
 
         String accessToken = jwtUtil.createToken(
                 UUID.fromString(userId),
                 Role.USER,
-                DeviceType.WEB,
-                OAuthProvider.valueOf(provider),
-                providerId);
+                determineDeviceType(request),
+                OAuthProvider.from(provider),
+                idToken.getSubject());
 
         response.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
         response.setStatus(HttpServletResponse.SC_OK);
     }
+
+    private DeviceType determineDeviceType(HttpServletRequest request) {
+        String userAgent = Optional.ofNullable(request.getHeader(HttpHeaders.USER_AGENT))
+                .orElse("")
+                .toLowerCase();
+
+        if (userAgent.contains("android")) {
+            return DeviceType.ANDROID;
+        }
+
+        if (userAgent.contains("iphone") || userAgent.contains("ipad")) {
+            return DeviceType.IOS;
+        }
+
+        return DeviceType.WEB;
+    }
+
 }
