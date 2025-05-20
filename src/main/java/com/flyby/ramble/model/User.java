@@ -48,14 +48,27 @@ public class User extends BaseEntity {
     @PrePersist
     public void assignExternalId() {
         if (externalId == null) {
-            externalId = UUID.randomUUID();
+            try {
+                UUID uuid = UUID.randomUUID();
+                long mostSigBits = uuid.getMostSignificantBits();
+                long leastSigBits = uuid.getLeastSignificantBits();
+
+                // 시간적 지역성을 개선하기 위한 비트 재배열
+                externalId =  new UUID(leastSigBits, mostSigBits);
+            } catch (SecurityException e) {
+                externalId = new UUID(System.currentTimeMillis(), System.nanoTime());
+            }
         }
     }
 
     @Builder
     public User(String username, String email, OAuthProvider provider, String providerId, Role role) {
-        if (username.isEmpty() || email.isEmpty() || provider == null || providerId.isEmpty()) {
+        if (username == null || email == null || provider == null || providerId == null) {
             throw new IllegalArgumentException("필수 필드는 null이 될 수 없습니다");
+        }
+
+        if (username.isEmpty() || email.isEmpty() || providerId.isEmpty()) {
+            throw new IllegalArgumentException("필수 필드는 빈 값이 될 수 없습니다");
         }
 
         this.username = username;
