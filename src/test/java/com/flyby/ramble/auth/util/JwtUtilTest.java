@@ -1,5 +1,7 @@
-package com.flyby.ramble.jwt;
+package com.flyby.ramble.auth.util;
 
+import com.flyby.ramble.model.DeviceType;
+import com.flyby.ramble.model.OAuthProvider;
 import com.flyby.ramble.model.Role;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.DisplayName;
@@ -31,7 +33,7 @@ class JwtUtilTest {
     @Test
     void createToken() {
         UUID uuid = UUID.randomUUID();
-        String token = jwtUtil.createToken(uuid, Role.USER, "testTenantId");
+        String token = jwtUtil.createToken(uuid, Role.USER, DeviceType.ANDROID, OAuthProvider.GOOGLE, "1223456");
         assertThat(token).isNotNull();
 
         Instant now = Instant.now();
@@ -39,7 +41,9 @@ class JwtUtilTest {
         Claims claims = jwtUtil.parseClaims(token);
         assertThat(claims.getSubject()).isEqualTo(uuid.toString());
         assertThat(claims.get("role", String.class)).isEqualTo("ROLE_" + Role.USER.name());
-        assertThat(claims.get("tenantId", String.class)).isEqualTo("testTenantId");
+        assertThat(claims.get("deviceType", String.class)).isEqualTo(DeviceType.ANDROID.name());
+        assertThat(claims.get("provider", String.class)).isEqualTo(OAuthProvider.GOOGLE.name());
+        assertThat(claims.get("providerId", String.class)).isEqualTo("1223456");
         assertThat(claims.getIssuer()).isEqualTo("test-issuer");
         assertThat(claims.getExpiration()).isAfter(now);
         assertThat(claims.getExpiration()).isBefore(now.plusMillis(1800000));

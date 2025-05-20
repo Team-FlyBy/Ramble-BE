@@ -1,5 +1,6 @@
-package com.flyby.ramble.jwt;
+package com.flyby.ramble.auth.filter;
 
+import com.flyby.ramble.auth.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

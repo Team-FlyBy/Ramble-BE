@@ -1,5 +1,7 @@
-package com.flyby.ramble.jwt;
+package com.flyby.ramble.auth.util;
 
+import com.flyby.ramble.model.DeviceType;
+import com.flyby.ramble.model.OAuthProvider;
 import com.flyby.ramble.model.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
@@ -7,6 +9,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.WeakKeyException;
 import jakarta.annotation.PostConstruct;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -56,22 +59,24 @@ public class JwtUtil {
     }
 
     public boolean isExpired(String token) {
-        return jwtParser
-                .parseSignedClaims(token)
-                .getPayload()
+        return parseClaims(token)
                 .getExpiration()
                 .before(new Date());
     }
 
-    public String createToken(UUID userId, Role role, String tenantId) {
+    public String createToken(@NonNull UUID userId, @NonNull Role role, @NonNull DeviceType deviceType, @NonNull OAuthProvider provider, @NonNull String providerId) {
         Instant now = Instant.now();
         Instant expiry = now.plusMillis(expiration);
 
-        // claim이 많아지면 claims로 변경
-        // TODO: tenantId 미구현 상태
+        Map<String, Object> claims = Map.of(
+                "role", "ROLE_" + role.name(),
+                "deviceType", deviceType.name(),
+                "provider", provider.name(),
+                "providerId", providerId
+        );
+
         return Jwts.builder()
-                .claim("role", "ROLE_" + role.name())
-                .claim("tenantId", tenantId)
+                .claims(claims)
                 .subject(userId.toString())
                 .issuer(issuer)
                 .issuedAt(Date.from(now))
