@@ -1,4 +1,4 @@
-package com.flyby.ramble.model;
+package com.flyby.ramble.common.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 

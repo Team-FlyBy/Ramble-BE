@@ -1,4 +1,4 @@
-package com.flyby.ramble.model;
+package com.flyby.ramble.common.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;

@@ -1,4 +1,4 @@
-package com.flyby.ramble.config;
+package com.flyby.ramble.common.config;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Info;

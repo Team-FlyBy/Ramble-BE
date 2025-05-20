@@ -1,9 +1,9 @@
 package com.flyby.ramble.auth.filter;
 
 import com.flyby.ramble.auth.util.JwtUtil;
-import com.flyby.ramble.model.DeviceType;
-import com.flyby.ramble.model.OAuthProvider;
-import com.flyby.ramble.model.Role;
+import com.flyby.ramble.common.model.DeviceType;
+import com.flyby.ramble.common.model.OAuthProvider;
+import com.flyby.ramble.user.model.Role;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

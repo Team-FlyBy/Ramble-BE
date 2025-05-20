@@ -1,4 +1,4 @@
-package com.flyby.ramble.config;
+package com.flyby.ramble.common.config;
 
 import com.flyby.ramble.auth.filter.JwtFilter;
 import com.flyby.ramble.auth.handler.OidcAuthenticationSuccessHandler;

@@ -1,5 +1,7 @@
-package com.flyby.ramble.model;
+package com.flyby.ramble.user.model;
 
+import com.flyby.ramble.common.model.BaseEntity;
+import com.flyby.ramble.common.model.OAuthProvider;
 import jakarta.persistence.*;
 import lombok.*;
 

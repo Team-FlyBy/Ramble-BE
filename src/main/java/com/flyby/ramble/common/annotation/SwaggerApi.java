@@ -1,4 +1,4 @@
-package com.flyby.ramble.annotation;
+package com.flyby.ramble.common.annotation;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -56,7 +56,7 @@ public @interface SwaggerApi {
     Content[] content() default {
             @Content(
                     mediaType = "application/json",
-                    schema = @Schema(implementation = Void.class)
+                    schema = @Schema(implementation = String.class)
             )
     };
 
