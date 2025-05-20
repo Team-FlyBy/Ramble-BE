@@ -40,6 +40,10 @@ public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHa
         String userId = claims.get("userId").toString();
         String provider = claims.get("provider").toString();
 
+        if (userId == null || provider == null) {
+            throw new IllegalArgumentException("userId 또는 provider가 null입니다.");
+        }
+
         String accessToken = jwtUtil.createToken(
                 UUID.fromString(userId),
                 Role.USER,
