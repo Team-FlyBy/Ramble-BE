@@ -6,9 +6,8 @@ import com.flyby.ramble.model.User;
 import com.flyby.ramble.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-
-import java.util.Optional;
 
 @Service
 @Transactional
@@ -17,23 +16,21 @@ public class UserService {
 
     private final UserRepository userRepository;
 
+    // TODO: 동일한 유저의 중복 생성 가능성 판단 후 수정
     public User registerOrLogin(String email, String username, OAuthProvider provider, String providerId) {
-        Optional<User> optUser = userRepository.findByProviderAndProviderId(provider, providerId);
-
-        if (optUser.isEmpty()) {
-            User user = User.builder()
-                    .email(email)
-                    .username(username)
-                    .provider(provider)
-                    .providerId(providerId)
-                    .role(Role.USER)
-                    .build();
-
-            return userRepository.save(user);
+        try {
+            return userRepository.findByProviderAndProviderId(provider, providerId)
+                    .orElseGet(() -> userRepository.save(User.builder()
+                            .email(email)
+                            .username(username)
+                            .provider(provider)
+                            .providerId(providerId)
+                            .role(Role.USER)
+                            .build()));
+        } catch (DataIntegrityViolationException e) {
+            return userRepository.findByProviderAndProviderId(provider, providerId)
+                    .orElseThrow(() -> new RuntimeException("예상치 못한 오류가 발생했습니다", e));
         }
-
-        return optUser.get();
     }
-
 
 }
