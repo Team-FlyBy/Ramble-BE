@@ -33,12 +33,16 @@ public class CustomOidcUserService implements OAuth2UserService<OidcUserRequest,
         Map<String, Object> claims = new HashMap<>(idToken.getClaims());
 
         String registration = userRequest.getClientRegistration().getRegistrationId();
-        OAuthProvider provider = OAuthProvider.valueOf(registration.toUpperCase());
+        OAuthProvider provider = OAuthProvider.from(registration);
         String providerId = idToken.getSubject();
-        String email = claims.get("email").toString();
-        String username = claims.get("name").toString();
+        Object email = claims.get("email");
+        Object username = claims.get("name");
 
-        User user = userService.registerOrLogin(email, username, provider, providerId);
+        if (email == null || username == null) {
+            throw new OAuth2AuthenticationException("필수 정보(email, name)가 누락되었습니다.");
+        }
+
+        User user = userService.registerOrLogin(email.toString(), username.toString(), provider, providerId);
 
         claims.put("userId", user.getExternalId());
         claims.put("provider", provider);
