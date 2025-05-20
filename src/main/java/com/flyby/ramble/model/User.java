@@ -49,12 +49,7 @@ public class User extends BaseEntity {
     public void assignExternalId() {
         if (externalId == null) {
             try {
-                UUID uuid = UUID.randomUUID();
-                long mostSigBits = uuid.getMostSignificantBits();
-                long leastSigBits = uuid.getLeastSignificantBits();
-
-                // 시간적 지역성을 개선하기 위한 비트 재배열
-                externalId =  new UUID(leastSigBits, mostSigBits);
+                externalId = UUID.randomUUID();
             } catch (SecurityException e) {
                 externalId = new UUID(System.currentTimeMillis(), System.nanoTime());
             }
