@@ -9,6 +9,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.WeakKeyException;
 import jakarta.annotation.PostConstruct;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -63,11 +64,10 @@ public class JwtUtil {
                 .before(new Date());
     }
 
-    public String createToken(UUID userId, Role role, DeviceType deviceType, OAuthProvider provider, String providerId) {
+    public String createToken(@NonNull UUID userId, @NonNull Role role, @NonNull DeviceType deviceType, @NonNull OAuthProvider provider, @NonNull String providerId) {
         Instant now = Instant.now();
         Instant expiry = now.plusMillis(expiration);
 
-        // claims 생성
         Map<String, Object> claims = Map.of(
                 "role", "ROLE_" + role.name(),
                 "deviceType", deviceType.name(),
