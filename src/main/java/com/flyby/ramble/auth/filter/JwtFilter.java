@@ -77,15 +77,17 @@ public class JwtFilter extends OncePerRequestFilter {
                     Collections.singletonList(new SimpleGrantedAuthority(role)));
 
             SecurityContextHolder.getContext().setAuthentication(auth);
-
-            filterChain.doFilter(request, response);
         } catch (ExpiredJwtException e) {
             log.warn("token expired", e);
             sendErrorResponse(response, ErrorCode.EXPIRED_ACCESS_TOKEN);
+            return;
         } catch (Exception e) {
             log.warn("token error", e);
             sendErrorResponse(response, ErrorCode.INVALID_ACCESS_TOKEN);
+            return;
         }
+
+        filterChain.doFilter(request, response);
     }
 
     private void sendErrorResponse(HttpServletResponse response, ErrorCode errorCode) throws IOException {
