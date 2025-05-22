@@ -1,9 +1,9 @@
 package com.flyby.ramble.auth.service;
 
-import com.flyby.ramble.model.OAuthProvider;
-import com.flyby.ramble.model.Role;
-import com.flyby.ramble.model.User;
-import com.flyby.ramble.service.UserService;
+import com.flyby.ramble.common.model.OAuthProvider;
+import com.flyby.ramble.user.model.Role;
+import com.flyby.ramble.user.model.User;
+import com.flyby.ramble.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

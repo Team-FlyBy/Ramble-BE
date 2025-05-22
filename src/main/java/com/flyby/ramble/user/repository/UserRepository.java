@@ -1,7 +1,7 @@
-package com.flyby.ramble.repository;
+package com.flyby.ramble.user.repository;
 
-import com.flyby.ramble.model.OAuthProvider;
-import com.flyby.ramble.model.User;
+import com.flyby.ramble.common.model.OAuthProvider;
+import com.flyby.ramble.user.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

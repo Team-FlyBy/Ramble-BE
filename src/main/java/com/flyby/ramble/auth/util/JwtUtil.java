@@ -1,8 +1,8 @@
 package com.flyby.ramble.auth.util;
 
-import com.flyby.ramble.model.DeviceType;
-import com.flyby.ramble.model.OAuthProvider;
-import com.flyby.ramble.model.Role;
+import com.flyby.ramble.common.model.DeviceType;
+import com.flyby.ramble.common.model.OAuthProvider;
+import com.flyby.ramble.user.model.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
@@ -56,12 +56,6 @@ public class JwtUtil {
         return jwtParser
                 .parseSignedClaims(token)
                 .getPayload();
-    }
-
-    public boolean isExpired(String token) {
-        return parseClaims(token)
-                .getExpiration()
-                .before(new Date());
     }
 
     public String createToken(@NonNull UUID userId, @NonNull Role role, @NonNull DeviceType deviceType, @NonNull OAuthProvider provider, @NonNull String providerId) {

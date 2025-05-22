@@ -1,9 +1,9 @@
-package com.flyby.ramble.service;
+package com.flyby.ramble.user.service;
 
-import com.flyby.ramble.model.OAuthProvider;
-import com.flyby.ramble.model.Role;
-import com.flyby.ramble.model.User;
-import com.flyby.ramble.repository.UserRepository;
+import com.flyby.ramble.common.model.OAuthProvider;
+import com.flyby.ramble.user.model.Role;
+import com.flyby.ramble.user.model.User;
+import com.flyby.ramble.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;

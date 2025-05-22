@@ -1,8 +1,8 @@
 package com.flyby.ramble.auth.util;
 
-import com.flyby.ramble.model.DeviceType;
-import com.flyby.ramble.model.OAuthProvider;
-import com.flyby.ramble.model.Role;
+import com.flyby.ramble.common.model.DeviceType;
+import com.flyby.ramble.common.model.OAuthProvider;
+import com.flyby.ramble.user.model.Role;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
