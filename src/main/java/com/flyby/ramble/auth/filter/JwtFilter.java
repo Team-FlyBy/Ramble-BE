@@ -53,11 +53,13 @@ public class JwtFilter extends OncePerRequestFilter {
         String authorizationToken = request.getHeader(HttpHeaders.AUTHORIZATION);
 
         if (!StringUtils.hasText(authorizationToken)) {
-            throw new BaseException(ErrorCode.MISSING_ACCESS_TOKEN);
+            sendErrorResponse(response, ErrorCode.MISSING_ACCESS_TOKEN);
+            return;
         }
 
         if (!authorizationToken.startsWith("Bearer ")) {
-            throw new BaseException(ErrorCode.INVALID_ACCESS_TOKEN);
+            sendErrorResponse(response, ErrorCode.INVALID_ACCESS_TOKEN);
+            return;
         }
 
         authorizationToken = authorizationToken.substring(7).trim();
