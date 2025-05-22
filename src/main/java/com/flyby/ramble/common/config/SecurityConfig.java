@@ -6,15 +6,17 @@ import com.flyby.ramble.auth.service.CustomOidcUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-
-import java.util.Collections;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 @Configuration
 @EnableWebSecurity
@@ -24,40 +26,47 @@ public class SecurityConfig {
     private final JwtFilter jwtFilter;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   CustomOidcUserService customOidcUserService,
-                                                   OidcAuthenticationSuccessHandler successHandler) throws Exception {
-        http.cors(cors -> cors
-                .configurationSource(request -> {
-                    CorsConfiguration config = new CorsConfiguration();
-                    config.setAllowedOriginPatterns(Collections.singletonList("*"));   // TODO : 추후 FE로 변경
-                    config.addAllowedMethod(CorsConfiguration.ALL);             // TODO : 추후 변경
-                    config.setAllowCredentials(true);
-                    config.setAllowedHeaders(Collections.singletonList("*"));
-                    config.setMaxAge(3600L);
-
-                    return config;
-                }));
-
-        // TODO : csrf, authorization 리스트 설정 변경
-        String[] list = {"/oauth2/authorize/**", "/oauth2/callback/**", "/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**"};
+    @Order(1)
+    public SecurityFilterChain jwtSecurityFilterChain(HttpSecurity http) throws Exception {
+        RequestMatcher excluded = new OrRequestMatcher(
+                new AntPathRequestMatcher("/oauth2/authorize/**"),
+                new AntPathRequestMatcher("/oauth2/callback/**"),
+                new AntPathRequestMatcher("/api-docs/**"),
+                new AntPathRequestMatcher("/swagger-ui/**"),
+                new AntPathRequestMatcher("/v3/api-docs/**")
+        );
 
         http
-                .csrf(csrf -> csrf
-                        .ignoringRequestMatchers(list))
-                .authorizeHttpRequests(requests -> requests
-                        .requestMatchers(list).permitAll()
+                .securityMatcher(new NegatedRequestMatcher(excluded))
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .authorizeHttpRequests(auth -> auth
                         .anyRequest().authenticated())
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        return http.build();
+    }
+
+    @Bean
+    @Order(2)
+    public SecurityFilterChain oauth2SecurityFilterChain(HttpSecurity http,
+                                                   CustomOidcUserService customOidcUserService,
+                                                   OidcAuthenticationSuccessHandler successHandler) throws Exception {
+        http
+                .securityMatcher(
+                        new OrRequestMatcher(
+                                new AntPathRequestMatcher("/oauth2/authorize/**"),
+                                new AntPathRequestMatcher("/oauth2/callback/**")
+                        )
+                )
+                .authorizeHttpRequests(auth -> auth
+                        .anyRequest().permitAll())
                 .oauth2Login(oauth2 -> oauth2
                         .authorizationEndpoint(auth -> auth.baseUri("/oauth2/authorize"))
                         .redirectionEndpoint(redir -> redir.baseUri("/oauth2/callback/*"))
                         .userInfoEndpoint(info -> info.oidcUserService(customOidcUserService))
                         .successHandler(successHandler))
-                .headers(headers -> headers
-                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                .csrf(AbstractHttpConfigurer::disable);
 
         return http.build();
     }
