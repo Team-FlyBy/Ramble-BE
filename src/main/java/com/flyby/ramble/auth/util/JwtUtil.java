@@ -58,12 +58,6 @@ public class JwtUtil {
                 .getPayload();
     }
 
-    public boolean isExpired(String token) {
-        return parseClaims(token)
-                .getExpiration()
-                .before(new Date());
-    }
-
     public String createToken(@NonNull UUID userId, @NonNull Role role, @NonNull DeviceType deviceType, @NonNull OAuthProvider provider, @NonNull String providerId) {
         Instant now = Instant.now();
         Instant expiry = now.plusMillis(expiration);
