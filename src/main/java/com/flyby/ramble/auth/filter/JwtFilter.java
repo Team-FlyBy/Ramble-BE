@@ -1,9 +1,12 @@
 package com.flyby.ramble.auth.filter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flyby.ramble.auth.util.JwtUtil;
 import com.flyby.ramble.common.exception.BaseException;
 import com.flyby.ramble.common.exception.ErrorCode;
+import com.flyby.ramble.common.model.ResponseDTO;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,6 +14,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -21,6 +25,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 
@@ -32,7 +37,7 @@ public class JwtFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
-    private static final List<String> list = List.of(
+    private static final List<String> EXCLUDED_URLS = List.of(
             "/api-docs/**",
             "/swagger-ui/**",
             "/v3/api-docs/**");
@@ -40,7 +45,7 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String requestURI = request.getRequestURI();
-        return list.stream().anyMatch(pattern -> pathMatcher.match(pattern, requestURI));
+        return EXCLUDED_URLS.stream().anyMatch(pattern -> pathMatcher.match(pattern, requestURI));
     }
 
     @Override
@@ -57,27 +62,37 @@ public class JwtFilter extends OncePerRequestFilter {
 
         authorizationToken = authorizationToken.substring(7).trim();
 
-        try {
-            if (jwtUtil.isExpired(authorizationToken)) {
-                throw new BaseException(ErrorCode.EXPIRED_ACCESS_TOKEN);
-            }
-        } catch (Exception e) {
-            throw new BaseException(ErrorCode.INVALID_ACCESS_TOKEN);
-        }
-
         // TODO: UserDetails 구현 필요
-        Claims claims = jwtUtil.parseClaims(authorizationToken);
-        String userId = claims.getSubject();
-        String role = claims.get("role", String.class);
-        role = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+        try {
+            Claims claims = jwtUtil.parseClaims(authorizationToken);
+            String userId = claims.getSubject();
+            String role = claims.get("role", String.class);
+            role = role.startsWith("ROLE_") ? role : "ROLE_" + role;
 
-        Authentication auth = new UsernamePasswordAuthenticationToken(
-                userId,
-                null,
-                Collections.singletonList(new SimpleGrantedAuthority(role)));
+            Authentication auth = new UsernamePasswordAuthenticationToken(
+                    userId,
+                    null,
+                    Collections.singletonList(new SimpleGrantedAuthority(role)));
 
-        SecurityContextHolder.getContext().setAuthentication(auth);
+            SecurityContextHolder.getContext().setAuthentication(auth);
 
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+        } catch (ExpiredJwtException e) {
+            log.warn("token expired", e);
+            sendErrorResponse(response, ErrorCode.EXPIRED_ACCESS_TOKEN);
+        } catch (Exception e) {
+            log.warn("token error", e);
+            sendErrorResponse(response, ErrorCode.INVALID_ACCESS_TOKEN);
+        }
+    }
+
+    private void sendErrorResponse(HttpServletResponse response, ErrorCode errorCode) throws IOException {
+        ResponseDTO<Object> responseDto = new ResponseDTO<>(errorCode.getHttpStatus().value(), errorCode.getMessage(), Collections.emptyMap());
+        String jsonResponse = new ObjectMapper().writeValueAsString(responseDto);
+
+        response.setStatus(errorCode.getHttpStatus().value());
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.getWriter().write(jsonResponse);
     }
 }
