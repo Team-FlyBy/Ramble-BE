@@ -30,19 +30,18 @@ public class SecurityConfig {
     public SecurityFilterChain jwtSecurityFilterChain(HttpSecurity http) throws Exception {
         RequestMatcher excluded = new OrRequestMatcher(
                 new AntPathRequestMatcher("/oauth2/authorize/**"),
-                new AntPathRequestMatcher("/oauth2/callback/**"),
-                new AntPathRequestMatcher("/api-docs/**"),
-                new AntPathRequestMatcher("/swagger-ui/**"),
-                new AntPathRequestMatcher("/v3/api-docs/**")
+                new AntPathRequestMatcher("/oauth2/callback/**")
         );
 
         http
                 .securityMatcher(new NegatedRequestMatcher(excluded))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .csrf(AbstractHttpConfigurer::disable);
 
         return http.build();
     }
