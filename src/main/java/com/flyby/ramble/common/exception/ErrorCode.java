@@ -17,7 +17,7 @@ public enum ErrorCode {
     EXPIRED_ACCESS_TOKEN (40004, HttpStatus.UNAUTHORIZED, "Expired Access Token"),
     INVALID_REFRESH_TOKEN(40005, HttpStatus.UNAUTHORIZED, "Invalid Refresh Token"),
     EXPIRED_REFRESH_TOKEN(40006, HttpStatus.UNAUTHORIZED, "Expired Refresh Token"),
-    ACCESS_DENIED(400067, HttpStatus.UNAUTHORIZED, "Access Denied"),
+    ACCESS_DENIED(40007, HttpStatus.UNAUTHORIZED, "Access Denied"),
 
     // 403 FORBIDDEN
     FORBIDDEN(403, HttpStatus.FORBIDDEN, "Forbidden"),
