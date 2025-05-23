@@ -2,13 +2,13 @@ package com.flyby.ramble.auth.util;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.experimental.UtilityClass;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import org.springframework.web.util.WebUtils;
 
 import java.util.Optional;
 
-@UtilityClass
+@Component
 public class CookieUtil {
 
     @Value("${jwt.expiration-ms.refresh}")
