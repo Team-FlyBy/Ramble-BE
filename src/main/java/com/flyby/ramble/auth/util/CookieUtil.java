@@ -19,7 +19,7 @@ public class CookieUtil {
         cookie.setPath("/");
         cookie.setHttpOnly(true);
         cookie.setMaxAge((int) (expiration / 1000));
-//        cookie.setSecure(true); // https 적용 후 수정
+        cookie.setSecure(true);
         cookie.setAttribute("SameSite", "Lax");
         return cookie;
     }
