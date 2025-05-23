@@ -1,18 +1,15 @@
 package com.flyby.ramble.auth.service;
 
+import com.flyby.ramble.auth.model.CustomOidcUser;
 import com.flyby.ramble.common.model.OAuthProvider;
-import com.flyby.ramble.user.model.Role;
 import com.flyby.ramble.user.model.User;
 import com.flyby.ramble.user.service.UserService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-import org.springframework.security.oauth2.core.oidc.OidcIdToken;
-import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 
@@ -29,38 +26,22 @@ public class CustomOidcUserService implements OAuth2UserService<OidcUserRequest,
     public OidcUser loadUser(OidcUserRequest userRequest) throws OAuth2AuthenticationException {
         OidcUser oidcUser = oidcUserService.loadUser(userRequest);
 
-        OidcIdToken idToken = oidcUser.getIdToken();
-        Map<String, Object> claims = new HashMap<>(idToken.getClaims());
-
-        String registration = userRequest.getClientRegistration().getRegistrationId();
-        OAuthProvider provider = OAuthProvider.from(registration);
-        String providerId = idToken.getSubject();
-        Object email = claims.get("email");
-        Object username = claims.get("name");
+        String provider = userRequest.getClientRegistration().getRegistrationId();
+        String subject  = oidcUser.getSubject();
+        String email    = oidcUser.getEmail();
+        String username = oidcUser.getFullName();
 
         if (email == null || username == null) {
             throw new OAuth2AuthenticationException("필수 정보(email, name)가 누락되었습니다.");
         }
 
-        User user = userService.registerOrLogin(email.toString(), username.toString(), provider, providerId);
+        User user = userService.registerOrLogin(email, username, OAuthProvider.from(provider), subject);
 
-        claims.put("userId", user.getExternalId());
-        claims.put("provider", provider);
-        claims.put("role", Role.USER);
-
-        Set<GrantedAuthority> auths = new HashSet<>(oidcUser.getAuthorities());
-        auths.add(new SimpleGrantedAuthority("ROLE_USER"));
-        OidcIdToken newIdToken = new OidcIdToken(
-            idToken.getTokenValue(),
-            idToken.getIssuedAt(),
-            idToken.getExpiresAt(),
-            claims
-        );
-
-        return new DefaultOidcUser(
-            auths,
-            newIdToken,
-            oidcUser.getUserInfo()
+        return new CustomOidcUser(
+                Set.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())),
+                oidcUser.getIdToken(),
+                oidcUser.getUserInfo(),
+                user
         );
     }
 }
