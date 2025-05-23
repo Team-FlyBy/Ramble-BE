@@ -28,8 +28,11 @@ public class JwtUtil {
     @Value("${jwt.issuer}")
     private String issuer;
 
-    @Value("${jwt.expiration-ms}")
-    private long expiration;
+    @Value("${jwt.expiration-ms.access}")
+    private long accessExpiration;
+
+    @Value("${jwt.expiration-ms.refresh}")
+    private long refreshExpiration;
 
     private SecretKey secretKey;
     private JwtParser jwtParser;
@@ -58,20 +61,30 @@ public class JwtUtil {
                 .getPayload();
     }
 
-    public String createToken(@NonNull UUID userId, @NonNull Role role, @NonNull DeviceType deviceType, @NonNull OAuthProvider provider, @NonNull String providerId) {
-        Instant now = Instant.now();
+    public String generateAccToken(String userId, Role role, DeviceType deviceType, OAuthProvider provider, String providerId) {
+        return createToken(userId, role, "access", deviceType, provider, providerId, accessExpiration);
+    }
+
+    public String generateRefToken(String userId, Role role, DeviceType deviceType, OAuthProvider provider, String providerId) {
+        return createToken(userId, role, "refresh", deviceType, provider, providerId, refreshExpiration);
+    }
+
+    private String createToken(@NonNull String userId, @NonNull Role role, @NonNull String tokenType, @NonNull DeviceType deviceType, @NonNull OAuthProvider provider, @NonNull String providerId, long expiration) {
+        Instant now    = Instant.now();
         Instant expiry = now.plusMillis(expiration);
 
         Map<String, Object> claims = Map.of(
-                "role", "ROLE_" + role.name(),
+                "jti",  UUID.randomUUID().toString(),
+                "role","ROLE_" + role.name(),
+                "type", tokenType,
                 "deviceType", deviceType.name(),
-                "provider", provider.name(),
+                "provider",   provider.name(),
                 "providerId", providerId
         );
 
         return Jwts.builder()
                 .claims(claims)
-                .subject(userId.toString())
+                .subject(userId)
                 .issuer(issuer)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiry))

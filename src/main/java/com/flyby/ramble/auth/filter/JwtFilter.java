@@ -2,7 +2,6 @@ package com.flyby.ramble.auth.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flyby.ramble.auth.util.JwtUtil;
-import com.flyby.ramble.common.exception.BaseException;
 import com.flyby.ramble.common.exception.ErrorCode;
 import com.flyby.ramble.common.model.ResponseDTO;
 import io.jsonwebtoken.Claims;
@@ -68,7 +67,7 @@ public class JwtFilter extends OncePerRequestFilter {
         try {
             Claims claims = jwtUtil.parseClaims(authorizationToken);
             String userId = claims.getSubject();
-            String role = claims.get("role", String.class);
+            String role   = claims.get("role", String.class);
             role = role.startsWith("ROLE_") ? role : "ROLE_" + role;
 
             Authentication auth = new UsernamePasswordAuthenticationToken(
