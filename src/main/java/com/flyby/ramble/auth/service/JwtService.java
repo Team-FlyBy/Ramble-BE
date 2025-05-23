@@ -13,19 +13,24 @@ import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class JwtService {
 
     private final JwtUtil jwtUtil;
+    private final CookieUtil cookieUtil;
     private final RefreshTokenRepository refreshTokenRepository;
 
     // TODO: DeviceType 구분 로직 필요, 현재는 WEB으로 고정
@@ -40,7 +45,7 @@ public class JwtService {
     }
 
     public void reissueTokens(HttpServletRequest request, HttpServletResponse response) {
-        String refToken  = CookieUtil.getCookie(request).orElseThrow(() -> new BaseException(ErrorCode.INVALID_REFRESH_TOKEN));
+        String refToken  = cookieUtil.getCookie(request).orElseThrow(() -> new BaseException(ErrorCode.INVALID_REFRESH_TOKEN));
         Claims refClaims = parseRefreshToken(refToken);
         String jti       = refClaims.get("jti", String.class);
         UUID   userId    = UUID.fromString(refClaims.getSubject());
@@ -49,6 +54,7 @@ public class JwtService {
         Optional<RefreshToken> optionalToken = refreshTokenRepository.findByIdAndRevokedFalse(jti);
 
         if (optionalToken.isEmpty()) {
+            log.warn("Invalid refresh token used: {}, userId: {}, deviceType: {}", jti, userId, type);
             refreshTokenRepository.revokeAllByUserIdAndDeviceType(userId, type);
             throw new BaseException(ErrorCode.ACCESS_DENIED);
         }
@@ -71,7 +77,7 @@ public class JwtService {
     private RefreshToken createRefreshToken(User user, Claims claims) {
         LocalDateTime exp = claims.getExpiration()
                 .toInstant()
-                .atZone(ZoneId.of("Asia/Seoul"))
+                .atZone(ZoneId.systemDefault())
                 .toLocalDateTime();
 
         return RefreshToken.builder()
@@ -84,7 +90,7 @@ public class JwtService {
 
     private void populateResponse(String access, String refresh, HttpServletResponse response) {
         response.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + access);
-        response.addCookie(CookieUtil.createCookie("refresh", refresh));
+        response.addCookie(cookieUtil.createCookie("refresh", refresh));
         response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_OK);
     }
 
