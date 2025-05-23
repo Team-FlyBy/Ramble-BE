@@ -2,10 +2,10 @@ package com.flyby.ramble.auth.repository;
 
 import com.flyby.ramble.auth.model.RefreshToken;
 import com.flyby.ramble.common.model.DeviceType;
-import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 import java.util.UUID;
