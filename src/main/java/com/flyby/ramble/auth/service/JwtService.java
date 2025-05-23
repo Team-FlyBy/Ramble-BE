@@ -75,6 +75,7 @@ public class JwtService {
     }
 
     private RefreshToken createRefreshToken(User user, Claims claims) {
+        String deviceType = claims.get("deviceType", String.class);
         LocalDateTime exp = claims.getExpiration()
                 .toInstant()
                 .atZone(ZoneId.systemDefault())
@@ -83,7 +84,7 @@ public class JwtService {
         return RefreshToken.builder()
                 .id(claims.get("jti", String.class))
                 .user(user)
-                .deviceType(DeviceType.WEB)
+                .deviceType(DeviceType.valueOf(deviceType))
                 .expiresAt(exp)
                 .build();
     }
