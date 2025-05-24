@@ -3,7 +3,7 @@ package com.flyby.ramble.auth.filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flyby.ramble.auth.util.JwtUtil;
 import com.flyby.ramble.common.exception.ErrorCode;
-import com.flyby.ramble.common.model.ResponseDTO;
+import com.flyby.ramble.common.dto.ResponseDTO;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
