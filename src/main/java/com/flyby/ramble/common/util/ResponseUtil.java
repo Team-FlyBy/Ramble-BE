@@ -1,7 +1,7 @@
 package com.flyby.ramble.common.util;
 
 import com.flyby.ramble.common.exception.ErrorCode;
-import com.flyby.ramble.common.model.ResponseDTO;
+import com.flyby.ramble.common.dto.ResponseDTO;
 import lombok.experimental.UtilityClass;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

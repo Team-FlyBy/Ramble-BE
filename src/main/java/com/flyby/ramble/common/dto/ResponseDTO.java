@@ -1,4 +1,4 @@
-package com.flyby.ramble.common.model;
+package com.flyby.ramble.common.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 

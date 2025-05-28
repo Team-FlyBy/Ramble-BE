@@ -1,6 +1,6 @@
 package com.flyby.ramble.common.exception;
 
-import com.flyby.ramble.common.model.ResponseDTO;
+import com.flyby.ramble.common.dto.ResponseDTO;
 import com.flyby.ramble.common.util.ResponseUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

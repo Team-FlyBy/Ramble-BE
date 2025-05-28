@@ -3,7 +3,7 @@ package com.flyby.ramble.auth.filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flyby.ramble.auth.util.JwtUtil;
 import com.flyby.ramble.common.exception.ErrorCode;
-import com.flyby.ramble.common.model.ResponseDTO;
+import com.flyby.ramble.common.dto.ResponseDTO;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
@@ -39,7 +39,8 @@ public class JwtFilter extends OncePerRequestFilter {
     private static final List<String> EXCLUDED_URLS = List.of(
             "/api-docs/**",
             "/swagger-ui/**",
-            "/v3/api-docs/**");
+            "/v3/api-docs/**",
+            "/ws/**");
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -49,26 +50,29 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String authorizationToken = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String authToken = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (!StringUtils.hasText(authorizationToken)) {
+        if (!StringUtils.hasText(authToken)) {
             sendErrorResponse(response, ErrorCode.MISSING_ACCESS_TOKEN);
             return;
         }
 
-        if (!authorizationToken.startsWith("Bearer ")) {
+        if (!authToken.startsWith("Bearer ")) {
             sendErrorResponse(response, ErrorCode.INVALID_ACCESS_TOKEN);
             return;
         }
 
-        authorizationToken = authorizationToken.substring(7).trim();
-
-        // TODO: UserDetails 구현 필요
         try {
-            Claims claims = jwtUtil.parseClaims(authorizationToken);
+            Claims claims = jwtUtil.parseClaims(authToken.substring(7).trim());
             String userId = claims.getSubject();
             String role   = claims.get("role", String.class);
             role = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+            String type   = claims.get("type", String.class);
+
+            if (!type.equals("access")) {
+                sendErrorResponse(response, ErrorCode.INVALID_ACCESS_TOKEN);
+                return;
+            }
 
             Authentication auth = new UsernamePasswordAuthenticationToken(
                     userId,
