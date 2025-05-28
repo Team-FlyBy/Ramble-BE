@@ -17,6 +17,11 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Collections;
 
 @Configuration
 @EnableWebSecurity
@@ -34,10 +39,11 @@ public class SecurityConfig {
         );
 
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .securityMatcher(new NegatedRequestMatcher(excluded))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws/**").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -52,6 +58,7 @@ public class SecurityConfig {
                                                    CustomOidcUserService customOidcUserService,
                                                    OidcAuthenticationSuccessHandler successHandler) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .securityMatcher(
                         new OrRequestMatcher(
                                 new AntPathRequestMatcher("/oauth2/authorize/**"),
@@ -65,9 +72,24 @@ public class SecurityConfig {
                         .redirectionEndpoint(redir -> redir.baseUri("/oauth2/callback/*"))
                         .userInfoEndpoint(info -> info.oidcUserService(customOidcUserService))
                         .successHandler(successHandler))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .csrf(AbstractHttpConfigurer::disable);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOriginPatterns(Collections.singletonList("*")); // TODO : 추후 FE로 변경
+        config.setAllowedMethods(Collections.singletonList("*"));        // TODO : 추후 변경
+        config.setAllowedHeaders(Collections.singletonList("*"));        // List.of(HttpHeaders.AUTHORIZATION, HttpHeaders.CONTENT_TYPE)
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
 }
