@@ -38,7 +38,7 @@ public class CustomOidcUserService implements OAuth2UserService<OidcUserRequest,
         User user = userService.registerOrLogin(email, username, OAuthProvider.from(provider), subject);
 
         return new CustomOidcUser(
-                Set.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())),
+                Set.of(new SimpleGrantedAuthority(user.getRole().name())),
                 oidcUser.getIdToken(),
                 oidcUser.getUserInfo(),
                 user

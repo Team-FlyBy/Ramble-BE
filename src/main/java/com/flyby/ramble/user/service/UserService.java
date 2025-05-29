@@ -26,7 +26,7 @@ public class UserService {
                             .username(username)
                             .provider(provider)
                             .providerId(providerId)
-                            .role(Role.USER)
+                            .role(Role.ROLE_USER)
                             .build()));
         } catch (DataIntegrityViolationException e) {
             return userRepository.findByProviderAndProviderId(provider, providerId)

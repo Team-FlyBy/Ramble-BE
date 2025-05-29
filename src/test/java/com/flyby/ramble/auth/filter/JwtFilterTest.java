@@ -50,7 +50,7 @@ class JwtFilterTest {
     void setUp() {
         jwtFilter = new JwtFilter(jwtUtil);
         userId = UUID.randomUUID().toString();
-        role = Role.USER;
+        role = Role.ROLE_USER;
         deviceType = DeviceType.ANDROID;
         provider = OAuthProvider.GOOGLE;
         providerId = "1223456";
@@ -60,7 +60,7 @@ class JwtFilterTest {
     @Test
     void doFilterInternal_validToken() throws Exception {
         // given
-        String token = jwtUtil.generateAccToken(userId, Role.USER, DeviceType.ANDROID, OAuthProvider.GOOGLE, "");
+        String token = jwtUtil.generateAccToken(userId, role, deviceType, provider, providerId);
 
         MockHttpServletRequest request   = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -75,7 +75,7 @@ class JwtFilterTest {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         assertThat(auth).isNotNull();
         assertThat(auth.getPrincipal()).isEqualTo(userId);
-        assertThat(auth.getAuthorities().iterator().next().getAuthority()).isEqualTo("ROLE_" + Role.USER.name());
+        assertThat(auth.getAuthorities().iterator().next().getAuthority()).isEqualTo(role.name());
 
         verify(filterChain).doFilter(request, response);
         SecurityContextHolder.clearContext();
@@ -106,7 +106,7 @@ class JwtFilterTest {
     @Test
     void doFilterInternal_invalidToken() throws Exception {
         // given
-        String token = jwtUtil.generateAccToken(userId, Role.USER, DeviceType.ANDROID, OAuthProvider.GOOGLE, "");
+        String token = jwtUtil.generateAccToken(userId, role, deviceType, provider, providerId);
 
         MockHttpServletRequest request   = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();

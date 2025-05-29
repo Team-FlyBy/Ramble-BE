@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 @JsonFormat(shape = JsonFormat.Shape.STRING)
 public enum Role {
-    USER,
-    MANAGER,
-    ADMIN
+    ROLE_USER,
+    ROLE_MANAGER,
+    ROLE_ADMIN
 }

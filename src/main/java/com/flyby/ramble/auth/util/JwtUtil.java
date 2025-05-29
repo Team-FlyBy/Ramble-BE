@@ -71,7 +71,6 @@ public class JwtUtil {
         Claims claims = parseClaims(token);
         String userId = claims.getSubject();
         String role   = claims.get("role", String.class);
-        role = role.startsWith("ROLE_") ? role : "ROLE_" + role;
 
         List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(role));
 

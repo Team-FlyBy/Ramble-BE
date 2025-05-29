@@ -43,7 +43,7 @@ class JwtUtilTest {
     @BeforeEach
     void setUp() {
         userId = UUID.randomUUID().toString();
-        role = Role.USER;
+        role = Role.ROLE_USER;
         deviceType = DeviceType.ANDROID;
         provider = OAuthProvider.GOOGLE;
         providerId = "1223456";
@@ -79,7 +79,7 @@ class JwtUtilTest {
 
         Claims claims = jwtUtil.parseClaims(token);
         assertThat(claims.getSubject()).isEqualTo(userId);
-        assertThat(claims.get("role",       String.class)).isEqualTo("ROLE_" + role.name());
+        assertThat(claims.get("role",       String.class)).isEqualTo(role.name());
         assertThat(claims.get("type",       String.class)).isEqualTo("refresh");
         assertThat(claims.get("deviceType", String.class)).isEqualTo(deviceType.name());
         assertThat(claims.get("provider",   String.class)).isEqualTo(provider.name());
