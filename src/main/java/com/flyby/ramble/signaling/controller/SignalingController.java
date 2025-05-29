@@ -9,6 +9,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -21,8 +22,10 @@ public class SignalingController {
 
     @MessageMapping("/signal")
     public void handleSignalMessage(@Payload SignalMessage signalMessage, Principal principal) {
-        String senderId = principal.getName();
         String receiverId;
+        String senderId = Optional.ofNullable(principal)
+                .map(Principal::getName)
+                .orElseThrow(() -> new IllegalArgumentException("인증된 사용자 ID가 유효하지 않습니다."));
 
         if (signalMessage.getType() == SignalType.OFFER) {
             receiverId = waitingQueue.poll();
