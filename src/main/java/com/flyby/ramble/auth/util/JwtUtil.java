@@ -70,7 +70,6 @@ public class JwtUtil {
     public Authentication parseAuthentication(String token) {
         Claims claims = parseClaims(token);
         String userId = claims.getSubject();
-        String jti    = claims.get("jti",  String.class);
         String role   = claims.get("role", String.class);
         role = role.startsWith("ROLE_") ? role : "ROLE_" + role;
 
@@ -82,7 +81,7 @@ public class JwtUtil {
                 .authorities(authorities)
                 .build();
 
-        return new UsernamePasswordAuthenticationToken(principal, jti, authorities);
+        return new UsernamePasswordAuthenticationToken(principal, null, authorities);
     }
 
     public String generateAccToken(String userId, Role role, DeviceType deviceType, OAuthProvider provider, String providerId) {
