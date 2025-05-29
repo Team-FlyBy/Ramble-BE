@@ -1,12 +1,14 @@
 package com.flyby.ramble.signaling.controller;
 
 import com.flyby.ramble.signaling.dto.SignalMessage;
+import com.flyby.ramble.signaling.model.SignalType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
+import java.security.Principal;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -18,23 +20,23 @@ public class SignalingController {
     private final Queue<String> waitingQueue = new ConcurrentLinkedQueue<>();
 
     @MessageMapping("/signal")
-    public void handleSignalMessage(@Payload SignalMessage signalMessage) {
+    public void handleSignalMessage(@Payload SignalMessage signalMessage, Principal principal) {
+        String senderId = principal.getName();
         String receiverId;
 
-        if (signalMessage.getType().equals("offer")) {
+        if (signalMessage.getType() == SignalType.OFFER) {
             receiverId = waitingQueue.poll();
 
             if (receiverId == null) {
-                waitingQueue.add(signalMessage.getSenderId());
+                waitingQueue.add(senderId);
                 return;
             }
-
-            signalMessage.setReceiverId(receiverId);
         } else {
             receiverId = signalMessage.getReceiverId();
         }
 
-        messagingTemplate.convertAndSend(String.format("/topic/signal/%s", receiverId), signalMessage);
+        signalMessage.setSenderId(senderId);
+        messagingTemplate.convertAndSendToUser(receiverId, "/queue/signal", signalMessage);
     }
 
 }
