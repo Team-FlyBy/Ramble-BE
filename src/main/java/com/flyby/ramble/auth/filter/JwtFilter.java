@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flyby.ramble.auth.util.JwtUtil;
 import com.flyby.ramble.common.exception.ErrorCode;
 import com.flyby.ramble.common.dto.ResponseDTO;
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,9 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
@@ -53,32 +50,20 @@ public class JwtFilter extends OncePerRequestFilter {
         String authToken = request.getHeader(HttpHeaders.AUTHORIZATION);
 
         if (!StringUtils.hasText(authToken)) {
+            log.warn("missing access token");
             sendErrorResponse(response, ErrorCode.MISSING_ACCESS_TOKEN);
             return;
         }
 
         if (!authToken.startsWith("Bearer ")) {
+            log.warn("invalid access token format");
             sendErrorResponse(response, ErrorCode.INVALID_ACCESS_TOKEN);
             return;
         }
 
         try {
-            Claims claims = jwtUtil.parseClaims(authToken.substring(7).trim());
-            String userId = claims.getSubject();
-            String role   = claims.get("role", String.class);
-            role = role.startsWith("ROLE_") ? role : "ROLE_" + role;
-            String type   = claims.get("type", String.class);
-
-            if (!type.equals("access")) {
-                sendErrorResponse(response, ErrorCode.INVALID_ACCESS_TOKEN);
-                return;
-            }
-
-            Authentication auth = new UsernamePasswordAuthenticationToken(
-                    userId,
-                    null,
-                    Collections.singletonList(new SimpleGrantedAuthority(role)));
-
+            authToken = authToken.substring(7).trim();
+            Authentication auth = jwtUtil.parseAuthentication(authToken);
             SecurityContextHolder.getContext().setAuthentication(auth);
         } catch (ExpiredJwtException e) {
             log.warn("token expired", e);

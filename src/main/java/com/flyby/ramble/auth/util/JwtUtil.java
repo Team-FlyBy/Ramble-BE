@@ -12,6 +12,12 @@ import jakarta.annotation.PostConstruct;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -61,6 +67,23 @@ public class JwtUtil {
                 .getPayload();
     }
 
+    public Authentication parseAuthentication(String token) {
+        Claims claims = parseClaims(token);
+        String userId = claims.getSubject();
+        String role   = claims.get("role", String.class);
+        role = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+
+        List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(role));
+
+        UserDetails principal = User.builder()
+                .username(userId)
+                .password("")
+                .authorities(authorities)
+                .build();
+
+        return new UsernamePasswordAuthenticationToken(principal, null, authorities);
+    }
+
     public String generateAccToken(String userId, Role role, DeviceType deviceType, OAuthProvider provider, String providerId) {
         return createToken(userId, role, "access", deviceType, provider, providerId, accessExpiration);
     }
@@ -75,7 +98,7 @@ public class JwtUtil {
 
         Map<String, Object> claims = Map.of(
                 "jti",  UUID.randomUUID().toString(),
-                "role","ROLE_" + role.name(),
+                "role", role.name(),
                 "type", tokenType,
                 "deviceType", deviceType.name(),
                 "provider",   provider.name(),
