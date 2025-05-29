@@ -99,10 +99,10 @@ public class JwtUtil {
 
         Map<String, Object> claims = Map.of(
                 "jti",  UUID.randomUUID().toString(),
-                "role", role,
+                "role", role.name(),
                 "type", tokenType,
-                "deviceType", deviceType,
-                "provider",   provider,
+                "deviceType", deviceType.name(),
+                "provider",   provider.name(),
                 "providerId", providerId
         );
 
