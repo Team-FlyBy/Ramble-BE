@@ -1,6 +1,6 @@
-package com.flyby.ramble.auth.handler;
+package com.flyby.ramble.oauth.handler;
 
-import com.flyby.ramble.auth.model.CustomOidcUser;
+import com.flyby.ramble.oauth.model.CustomOidcUser;
 import com.flyby.ramble.auth.service.JwtService;
 import com.flyby.ramble.user.model.User;
 import jakarta.servlet.ServletException;

@@ -1,8 +1,8 @@
 package com.flyby.ramble.common.config;
 
 import com.flyby.ramble.auth.filter.JwtFilter;
-import com.flyby.ramble.auth.handler.OidcAuthenticationSuccessHandler;
-import com.flyby.ramble.auth.service.CustomOidcUserService;
+import com.flyby.ramble.oauth.handler.OidcAuthenticationSuccessHandler;
+import com.flyby.ramble.oauth.service.CustomOidcUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

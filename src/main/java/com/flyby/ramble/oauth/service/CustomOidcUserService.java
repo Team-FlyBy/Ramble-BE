@@ -1,6 +1,6 @@
-package com.flyby.ramble.auth.service;
+package com.flyby.ramble.oauth.service;
 
-import com.flyby.ramble.auth.model.CustomOidcUser;
+import com.flyby.ramble.oauth.model.CustomOidcUser;
 import com.flyby.ramble.common.model.OAuthProvider;
 import com.flyby.ramble.user.model.User;
 import com.flyby.ramble.user.service.UserService;
