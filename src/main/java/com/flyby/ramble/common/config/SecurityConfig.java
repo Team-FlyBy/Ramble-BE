@@ -43,7 +43,7 @@ public class SecurityConfig {
                 .securityMatcher(new NegatedRequestMatcher(excluded))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws/**").permitAll()
+                        .requestMatchers("/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws/**", "auth/reissue").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
