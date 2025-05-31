@@ -1,5 +1,6 @@
 package com.flyby.ramble.auth.filter;
 
+import com.flyby.ramble.auth.service.AuthService;
 import com.flyby.ramble.auth.util.JwtUtil;
 import com.flyby.ramble.common.model.DeviceType;
 import com.flyby.ramble.common.model.OAuthProvider;
@@ -16,6 +17,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -48,7 +50,7 @@ class JwtFilterTest {
 
     @BeforeEach
     void setUp() {
-        jwtFilter = new JwtFilter(jwtUtil);
+        jwtFilter = new JwtFilter(new AuthService(), jwtUtil);
         userId = UUID.randomUUID().toString();
         role = Role.ROLE_USER;
         deviceType = DeviceType.ANDROID;
@@ -74,8 +76,10 @@ class JwtFilterTest {
         // then
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         assertThat(auth).isNotNull();
-        assertThat(auth.getPrincipal()).isEqualTo(userId);
-        assertThat(auth.getAuthorities().iterator().next().getAuthority()).isEqualTo(role.name());
+
+        UserDetails userDetails = (UserDetails) auth.getPrincipal();
+        assertThat(userDetails.getUsername()).isEqualTo(userId);
+        assertThat(userDetails.getAuthorities().iterator().next().getAuthority()).isEqualTo(role.name());
 
         verify(filterChain).doFilter(request, response);
         SecurityContextHolder.clearContext();
