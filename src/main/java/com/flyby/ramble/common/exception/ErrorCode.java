@@ -12,17 +12,19 @@ public enum ErrorCode {
 
     // 401 UNAUTHORIZED
     MISSING_ACCESS_TOKEN (40001, HttpStatus.UNAUTHORIZED, "Missing Access Token"),
-    MISSING_REFRESH_TOKEN(40002, HttpStatus.UNAUTHORIZED, "Missing Refresh Token"),
-    INVALID_ACCESS_TOKEN (40003, HttpStatus.UNAUTHORIZED, "Invalid Access Token"),
-    EXPIRED_ACCESS_TOKEN (40004, HttpStatus.UNAUTHORIZED, "Expired Access Token"),
-    INVALID_REFRESH_TOKEN(40005, HttpStatus.UNAUTHORIZED, "Invalid Refresh Token"),
-    EXPIRED_REFRESH_TOKEN(40006, HttpStatus.UNAUTHORIZED, "Expired Refresh Token"),
-    ACCESS_DENIED(40007, HttpStatus.UNAUTHORIZED, "Access Denied"),
+    INVALID_ACCESS_TOKEN (40002, HttpStatus.UNAUTHORIZED, "Invalid Access Token"),
+    EXPIRED_ACCESS_TOKEN (40003, HttpStatus.UNAUTHORIZED, "Expired Access Token"),
+    BLOCKED_ACCESS_TOKEN (40004, HttpStatus.UNAUTHORIZED, "Blocked Access Token"),
+    MISSING_REFRESH_TOKEN(40011, HttpStatus.UNAUTHORIZED, "Missing Refresh Token"),
+    INVALID_REFRESH_TOKEN(40012, HttpStatus.UNAUTHORIZED, "Invalid Refresh Token"),
+    EXPIRED_REFRESH_TOKEN(40013, HttpStatus.UNAUTHORIZED, "Expired Refresh Token"),
+    ACCESS_DENIED(40021, HttpStatus.UNAUTHORIZED, "Access Denied"),
 
     // 403 FORBIDDEN
     FORBIDDEN(403, HttpStatus.FORBIDDEN, "Forbidden"),
 
     // 404 NOT_FOUND
+    USER_NOT_FOUND(40401, HttpStatus.NOT_FOUND, "User Not Found"),
 
     // 409 CONFLICT
 
