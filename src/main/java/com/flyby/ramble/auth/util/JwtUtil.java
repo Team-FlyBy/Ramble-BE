@@ -1,8 +1,6 @@
 package com.flyby.ramble.auth.util;
 
-import com.flyby.ramble.common.model.DeviceType;
-import com.flyby.ramble.common.model.OAuthProvider;
-import com.flyby.ramble.user.model.Role;
+import com.flyby.ramble.auth.dto.JwtTokenRequest;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
@@ -83,30 +81,30 @@ public class JwtUtil {
         return new UsernamePasswordAuthenticationToken(principal, null, authorities);
     }
 
-    public String generateAccToken(String userId, Role role, DeviceType deviceType, OAuthProvider provider, String providerId) {
-        return createToken(userId, role, "access", deviceType, provider, providerId, accessExpiration);
+    public String generateAccToken(JwtTokenRequest request) {
+        return createToken(request,"access", accessExpiration);
     }
 
-    public String generateRefToken(String userId, Role role, DeviceType deviceType, OAuthProvider provider, String providerId) {
-        return createToken(userId, role, "refresh", deviceType, provider, providerId, refreshExpiration);
+    public String generateRefToken(JwtTokenRequest request) {
+        return createToken(request,"refresh", refreshExpiration);
     }
 
-    private String createToken(@NonNull String userId, @NonNull Role role, @NonNull String tokenType, @NonNull DeviceType deviceType, @NonNull OAuthProvider provider, @NonNull String providerId, long expiration) {
+    private String createToken(@NonNull JwtTokenRequest request, @NonNull String tokenType, long expiration) {
         Instant now    = Instant.now();
         Instant expiry = now.plusMillis(expiration);
 
         Map<String, Object> claims = Map.of(
-                "jti",  UUID.randomUUID().toString(),
-                "role", role.name(),
+                "jti",  request.jti().toString(),
+                "role", request.role().name(),
                 "type", tokenType,
-                "deviceType", deviceType.name(),
-                "provider",   provider.name(),
-                "providerId", providerId
+                "deviceType", request.deviceType().name(),
+                "provider",   request.provider().name(),
+                "providerId", request.providerId()
         );
 
         return Jwts.builder()
                 .claims(claims)
-                .subject(userId)
+                .subject(request.userExternalId().toString())
                 .issuer(issuer)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiry))
