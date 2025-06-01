@@ -9,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -21,8 +22,8 @@ import java.time.LocalDateTime;
 public class RefreshToken extends BaseEntity {
 
     @Id
-    @Column(length = 36)
-    private String id;
+    @Column(columnDefinition = "BINARY(16)")
+    private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -39,7 +40,7 @@ public class RefreshToken extends BaseEntity {
     private boolean revoked;
 
     @Builder
-    public RefreshToken(String id, User user, DeviceType deviceType, LocalDateTime expiresAt) {
+    public RefreshToken(UUID id, User user, DeviceType deviceType, LocalDateTime expiresAt) {
         this.id = id;
         this.user = user;
         this.deviceType = deviceType;
