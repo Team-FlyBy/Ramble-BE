@@ -1,5 +1,6 @@
 package com.flyby.ramble.auth.filter;
 
+import com.flyby.ramble.auth.dto.JwtTokenRequest;
 import com.flyby.ramble.auth.service.AuthService;
 import com.flyby.ramble.auth.util.JwtUtil;
 import com.flyby.ramble.common.model.DeviceType;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -37,32 +39,34 @@ import static org.mockito.Mockito.*;
 })
 class JwtFilterTest {
 
+    @Mock
+    AuthService authService;
+
     @Autowired
     JwtUtil jwtUtil;
 
     JwtFilter jwtFilter;
 
-    String userId;
-    Role role;
-    DeviceType deviceType;
-    OAuthProvider provider;
-    String providerId;
+    JwtTokenRequest tokenRequest;
 
     @BeforeEach
     void setUp() {
-        jwtFilter = new JwtFilter(new AuthService(), jwtUtil);
-        userId = UUID.randomUUID().toString();
-        role = Role.ROLE_USER;
-        deviceType = DeviceType.ANDROID;
-        provider = OAuthProvider.GOOGLE;
-        providerId = "1223456";
+        jwtFilter = new JwtFilter(authService, jwtUtil);
+        tokenRequest = new JwtTokenRequest(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                Role.ROLE_USER,
+                DeviceType.ANDROID,
+                OAuthProvider.GOOGLE,
+                "1223456"
+        );
     }
 
     @DisplayName("JWT 필터 테스트 - 유효한 토큰")
     @Test
     void doFilterInternal_validToken() throws Exception {
         // given
-        String token = jwtUtil.generateAccToken(userId, role, deviceType, provider, providerId);
+        String token = jwtUtil.generateAccToken(tokenRequest);
 
         MockHttpServletRequest request   = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -78,8 +82,8 @@ class JwtFilterTest {
         assertThat(auth).isNotNull();
 
         UserDetails userDetails = (UserDetails) auth.getPrincipal();
-        assertThat(userDetails.getUsername()).isEqualTo(userId);
-        assertThat(userDetails.getAuthorities().iterator().next().getAuthority()).isEqualTo(role.name());
+        assertThat(userDetails.getUsername()).isEqualTo(tokenRequest.userExternalId().toString());
+        assertThat(userDetails.getAuthorities().iterator().next().getAuthority()).isEqualTo(tokenRequest.role().name());
 
         verify(filterChain).doFilter(request, response);
         SecurityContextHolder.clearContext();
@@ -110,7 +114,7 @@ class JwtFilterTest {
     @Test
     void doFilterInternal_invalidToken() throws Exception {
         // given
-        String token = jwtUtil.generateAccToken(userId, role, deviceType, provider, providerId);
+        String token = jwtUtil.generateAccToken(tokenRequest);
 
         MockHttpServletRequest request   = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
