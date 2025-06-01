@@ -44,7 +44,7 @@ public class User extends BaseEntity {
     @Column(name = "provider", nullable = false, updatable = false)
     private OAuthProvider provider;
 
-    @Column(name = "provider_id", nullable = false, updatable = true)
+    @Column(name = "provider_id", nullable = false, updatable = false)
     private String providerId;
 
     @Enumerated(EnumType.STRING)
@@ -76,16 +76,6 @@ public class User extends BaseEntity {
         this.externalId = UUID.randomUUID();
         this.role = Role.ROLE_USER;
         this.status = Status.ACTIVE;
-    }
-
-    public User anonymize() {
-        this.status = Status.INACTIVE;
-
-        this.username = "user_" + externalId;
-        this.email = "email_" + externalId + "@example.com";
-        this.providerId = "provider_id_" + externalId;
-
-        return this;
     }
 
 }
