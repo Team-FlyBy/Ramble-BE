@@ -1,13 +1,17 @@
 package com.flyby.ramble.user.service;
 
+import com.flyby.ramble.common.exception.BaseException;
+import com.flyby.ramble.common.exception.ErrorCode;
 import com.flyby.ramble.common.model.OAuthProvider;
-import com.flyby.ramble.user.model.Role;
+import com.flyby.ramble.user.model.Status;
 import com.flyby.ramble.user.model.User;
 import com.flyby.ramble.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -26,12 +30,25 @@ public class UserService {
                             .username(username)
                             .provider(provider)
                             .providerId(providerId)
-                            .role(Role.USER)
                             .build()));
         } catch (DataIntegrityViolationException e) {
             return userRepository.findByProviderAndProviderId(provider, providerId)
                     .orElseThrow(() -> new IllegalArgumentException("예상치 못한 오류가 발생했습니다", e));
         }
+    }
+
+    public void withdraw(String userExternalId) {
+        User user = userRepository.findByExternalId(UUID.fromString(userExternalId))
+                .orElseThrow(() -> new BaseException(ErrorCode.USER_NOT_FOUND));
+
+        userRepository.anonymizeFields(
+                user.getId(),
+                Status.INACTIVE,
+                "email_" + user.getExternalId() + "@example.com",
+                "user_" + user.getExternalId(),
+                "provider_id_" + user.getExternalId()
+        );
+
     }
 
 }

@@ -7,13 +7,20 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface RefreshTokenRepository extends JpaRepository<RefreshToken, String> {
+public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
 
-    // find by id and not revoked
-    Optional<RefreshToken> findByIdAndRevokedFalse(String id);
+    Optional<RefreshToken> findByIdAndRevokedFalse(UUID id);
+
+    void deleteAllByExpiresAtBeforeOrRevokedTrue(LocalDateTime localDateTime);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE RefreshToken rt SET rt.revoked = true WHERE rt.user.externalId = :externalId")
+    int revokeAllByUserExternalId(UUID externalId);
 
     @Modifying
     @Transactional

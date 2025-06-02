@@ -1,12 +1,15 @@
-package com.flyby.ramble.auth.handler;
+package com.flyby.ramble.oauth.handler;
 
-import com.flyby.ramble.auth.model.CustomOidcUser;
+import com.flyby.ramble.auth.dto.Tokens;
+import com.flyby.ramble.auth.util.CookieUtil;
+import com.flyby.ramble.oauth.model.CustomOidcUser;
 import com.flyby.ramble.auth.service.JwtService;
 import com.flyby.ramble.user.model.User;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -17,7 +20,10 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
+    private static final String REFRESH_COOKIE = "refresh";
+
     private final JwtService jwtService;
+    private final CookieUtil cookieUtil;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request,
@@ -29,7 +35,14 @@ public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHa
 
         User user = oidcUser.getUser();
 
-        jwtService.generateTokens(user, response);
+        Tokens tokens = jwtService.generateTokens(user);
+        sendResponse(tokens, response);
+    }
+
+    private void sendResponse(Tokens tokens, HttpServletResponse response) {
+        response.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accToken());
+        response.addCookie(cookieUtil.createCookie(REFRESH_COOKIE, tokens.refToken()));
+        response.setStatus(HttpServletResponse.SC_OK);
     }
 
 }

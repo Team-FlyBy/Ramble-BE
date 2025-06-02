@@ -1,6 +1,7 @@
 package com.flyby.ramble.auth.filter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.flyby.ramble.auth.service.AuthService;
 import com.flyby.ramble.auth.util.JwtUtil;
 import com.flyby.ramble.common.exception.ErrorCode;
 import com.flyby.ramble.common.dto.ResponseDTO;
@@ -30,14 +31,17 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
 
-    private final JwtUtil jwtUtil;
-    private final AntPathMatcher pathMatcher = new AntPathMatcher();
-
     private static final List<String> EXCLUDED_URLS = List.of(
             "/api-docs/**",
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/ws/**");
+            "/ws/**",
+            "/auth/reissue"
+    );
+
+    private final AuthService authService;
+    private final JwtUtil jwtUtil;
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -47,30 +51,19 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String authToken = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (!StringUtils.hasText(authToken)) {
-            log.warn("missing access token");
-            sendErrorResponse(response, ErrorCode.MISSING_ACCESS_TOKEN);
-            return;
-        }
-
-        if (!authToken.startsWith("Bearer ")) {
-            log.warn("invalid access token format");
-            sendErrorResponse(response, ErrorCode.INVALID_ACCESS_TOKEN);
+        if (!isValidToken(authHeader, response)) {
             return;
         }
 
         try {
-            authToken = authToken.substring(7).trim();
-            Authentication auth = jwtUtil.parseAuthentication(authToken);
+            Authentication auth = jwtUtil.parseAuthentication(authHeader.substring(7).trim());
             SecurityContextHolder.getContext().setAuthentication(auth);
         } catch (ExpiredJwtException e) {
-            log.warn("token expired", e);
             sendErrorResponse(response, ErrorCode.EXPIRED_ACCESS_TOKEN);
             return;
         } catch (Exception e) {
-            log.warn("token error", e);
             sendErrorResponse(response, ErrorCode.INVALID_ACCESS_TOKEN);
             return;
         }
@@ -78,7 +71,28 @@ public class JwtFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    private boolean isValidToken(String authHeader, HttpServletResponse response) throws IOException {
+        if (!StringUtils.hasText(authHeader)) {
+            sendErrorResponse(response, ErrorCode.MISSING_ACCESS_TOKEN);
+            return false;
+        }
+
+        if (!authHeader.startsWith("Bearer ")) {
+            sendErrorResponse(response, ErrorCode.INVALID_ACCESS_TOKEN);
+            return false;
+        }
+
+        if (authService.isBlacklisted(authHeader.substring(7).trim())) {
+            sendErrorResponse(response, ErrorCode.BLOCKED_ACCESS_TOKEN);
+            return false;
+        }
+
+        return true;
+    }
+
     private void sendErrorResponse(HttpServletResponse response, ErrorCode errorCode) throws IOException {
+        log.warn(errorCode.getMessage());
+
         ResponseDTO<Object> responseDto = new ResponseDTO<>(errorCode.getHttpStatus().value(), errorCode.getMessage(), Collections.emptyMap());
         String jsonResponse = new ObjectMapper().writeValueAsString(responseDto);
 

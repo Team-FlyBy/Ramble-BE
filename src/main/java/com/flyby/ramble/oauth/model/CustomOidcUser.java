@@ -1,4 +1,4 @@
-package com.flyby.ramble.auth.model;
+package com.flyby.ramble.oauth.model;
 
 import com.flyby.ramble.user.model.User;
 import org.springframework.security.core.GrantedAuthority;

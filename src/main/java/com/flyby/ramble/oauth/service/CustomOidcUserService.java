@@ -1,7 +1,8 @@
-package com.flyby.ramble.auth.service;
+package com.flyby.ramble.oauth.service;
 
-import com.flyby.ramble.auth.model.CustomOidcUser;
+import com.flyby.ramble.oauth.model.CustomOidcUser;
 import com.flyby.ramble.common.model.OAuthProvider;
+import com.flyby.ramble.user.model.Status;
 import com.flyby.ramble.user.model.User;
 import com.flyby.ramble.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -37,8 +38,12 @@ public class CustomOidcUserService implements OAuth2UserService<OidcUserRequest,
 
         User user = userService.registerOrLogin(email, username, OAuthProvider.from(provider), subject);
 
+        if (user == null || user.getStatus() != Status.ACTIVE) {
+            throw new OAuth2AuthenticationException("사용자 정보가 유효하지 않습니다.");
+        }
+
         return new CustomOidcUser(
-                Set.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())),
+                Set.of(new SimpleGrantedAuthority(user.getRole().name())),
                 oidcUser.getIdToken(),
                 oidcUser.getUserInfo(),
                 user

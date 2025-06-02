@@ -1,5 +1,6 @@
 package com.flyby.ramble.auth.util;
 
+import com.flyby.ramble.auth.dto.JwtTokenRequest;
 import com.flyby.ramble.common.model.DeviceType;
 import com.flyby.ramble.common.model.OAuthProvider;
 import com.flyby.ramble.user.model.Role;
@@ -34,36 +35,35 @@ class JwtUtilTest {
     @Autowired
     private JwtUtil jwtUtil;
 
-    String userId;
-    Role role;
-    DeviceType deviceType;
-    OAuthProvider provider;
-    String providerId;
+    JwtTokenRequest request;
 
     @BeforeEach
     void setUp() {
-        userId = UUID.randomUUID().toString();
-        role = Role.USER;
-        deviceType = DeviceType.ANDROID;
-        provider = OAuthProvider.GOOGLE;
-        providerId = "1223456";
+        request = new JwtTokenRequest(
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                Role.ROLE_USER,
+                DeviceType.ANDROID,
+                OAuthProvider.GOOGLE,
+                "1223456"
+        );
     }
 
     @DisplayName("Access 생성 테스트")
     @Test
     void createToken() {
-        String token = jwtUtil.generateAccToken(userId, role, deviceType, provider, providerId);
+        String token = jwtUtil.generateAccToken(request);
         assertThat(token).isNotNull();
 
         Instant now = Instant.now();
 
         Claims claims = jwtUtil.parseClaims(token);
-        assertThat(claims.getSubject()).isEqualTo(userId);
-        assertThat(claims.get("role",       String.class)).isEqualTo("ROLE_" + role.name());
+        assertThat(claims.getSubject()).isEqualTo(request.userExternalId().toString());
+        assertThat(claims.get("role",       String.class)).isEqualTo(request.role().name());
         assertThat(claims.get("type",       String.class)).isEqualTo("access");
-        assertThat(claims.get("deviceType", String.class)).isEqualTo(deviceType.name());
-        assertThat(claims.get("provider",   String.class)).isEqualTo(provider.name());
-        assertThat(claims.get("providerId", String.class)).isEqualTo(providerId);
+        assertThat(claims.get("deviceType", String.class)).isEqualTo(request.deviceType().name());
+        assertThat(claims.get("provider",   String.class)).isEqualTo(request.provider().name());
+        assertThat(claims.get("providerId", String.class)).isEqualTo(request.providerId());
         assertThat(claims.getIssuer()).isEqualTo("test-issuer");
         assertThat(claims.getExpiration()).isAfter(now);
         assertThat(claims.getExpiration()).isBefore(now.plusMillis(3600000));
@@ -72,18 +72,18 @@ class JwtUtilTest {
     @DisplayName("Refresh 생성 테스트")
     @Test
     void createRefreshToken() {
-        String token = jwtUtil.generateRefToken(userId, role, deviceType, provider, providerId);
+        String token = jwtUtil.generateRefToken(request);
         assertThat(token).isNotNull();
 
         Instant now = Instant.now();
 
         Claims claims = jwtUtil.parseClaims(token);
-        assertThat(claims.getSubject()).isEqualTo(userId);
-        assertThat(claims.get("role",       String.class)).isEqualTo("ROLE_" + role.name());
+        assertThat(claims.getSubject()).isEqualTo(request.userExternalId().toString());
+        assertThat(claims.get("role",       String.class)).isEqualTo(request.role().name());
         assertThat(claims.get("type",       String.class)).isEqualTo("refresh");
-        assertThat(claims.get("deviceType", String.class)).isEqualTo(deviceType.name());
-        assertThat(claims.get("provider",   String.class)).isEqualTo(provider.name());
-        assertThat(claims.get("providerId", String.class)).isEqualTo(providerId);
+        assertThat(claims.get("deviceType", String.class)).isEqualTo(request.deviceType().name());
+        assertThat(claims.get("provider",   String.class)).isEqualTo(request.provider().name());
+        assertThat(claims.get("providerId", String.class)).isEqualTo(request.providerId());
         assertThat(claims.getIssuer()).isEqualTo("test-issuer");
         assertThat(claims.getExpiration()).isAfter(now);
         assertThat(claims.getExpiration()).isBefore(now.plusMillis(604800000));
@@ -93,7 +93,7 @@ class JwtUtilTest {
     @Test
     void expiredTokenTest() {
         String expiredToken = ReflectionTestUtils.invokeMethod(jwtUtil, "createToken",
-                userId, role, "access", deviceType, provider, providerId, 0L);
+                request, "access", 0L);
 
         try {
             Claims claims = jwtUtil.parseClaims(expiredToken);
@@ -106,7 +106,7 @@ class JwtUtilTest {
     @DisplayName("잘못된 토큰 테스트")
     @Test
     void invalidSignatureTest() {
-        String token = jwtUtil.generateAccToken(userId, role, deviceType, provider, providerId);
+        String token = jwtUtil.generateAccToken(request);
         String invalidToken = token.substring(0, token.lastIndexOf(".") + 1) + "invalidSignature";
 
         try {

@@ -1,8 +1,8 @@
 package com.flyby.ramble.common.config;
 
 import com.flyby.ramble.auth.filter.JwtFilter;
-import com.flyby.ramble.auth.handler.OidcAuthenticationSuccessHandler;
-import com.flyby.ramble.auth.service.CustomOidcUserService;
+import com.flyby.ramble.oauth.handler.OidcAuthenticationSuccessHandler;
+import com.flyby.ramble.oauth.service.CustomOidcUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,7 +43,7 @@ public class SecurityConfig {
                 .securityMatcher(new NegatedRequestMatcher(excluded))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws/**").permitAll()
+                        .requestMatchers("/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws/**", "/auth/reissue").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
