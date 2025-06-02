@@ -8,12 +8,12 @@ import com.flyby.ramble.auth.util.JwtUtil;
 import com.flyby.ramble.common.exception.BaseException;
 import com.flyby.ramble.common.exception.ErrorCode;
 import com.flyby.ramble.common.model.DeviceType;
+import com.flyby.ramble.common.properties.JwtProperties;
 import com.flyby.ramble.user.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,8 +29,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class JwtService {
 
-    @Value("${jwt.expiration-ms.refresh}")
-    private long refreshExpiration;
+    private final JwtProperties jwtProperties;
 
     private final JwtUtil jwtUtil;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -88,7 +87,7 @@ public class JwtService {
 
     private RefreshToken createRefreshToken(User user, JwtTokenRequest request) {
         LocalDateTime exp = Instant.now()
-                .plusMillis(refreshExpiration)
+                .plusMillis(jwtProperties.getRefreshExpiration())
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime();
 
