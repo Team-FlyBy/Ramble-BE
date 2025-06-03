@@ -21,6 +21,5 @@ security:
       allowed-headers:
         - Authorization
         - Content-Type
-        - ngrok-skip-browser-warning
       allow-credentials: true
       max-age: 3600
