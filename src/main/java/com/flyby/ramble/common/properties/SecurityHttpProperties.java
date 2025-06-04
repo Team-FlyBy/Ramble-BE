@@ -38,7 +38,6 @@ public class SecurityHttpProperties {
         @NotEmpty
         private List<String> allowedHeaders;
 
-        @NotEmpty
         private boolean allowCredentials;
 
         @Positive
