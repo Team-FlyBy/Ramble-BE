@@ -3,6 +3,7 @@ package com.flyby.ramble.auth.filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flyby.ramble.auth.service.AuthService;
 import com.flyby.ramble.auth.util.JwtUtil;
+import com.flyby.ramble.common.constants.JwtConstants;
 import com.flyby.ramble.common.exception.ErrorCode;
 import com.flyby.ramble.common.dto.ResponseDTO;
 import com.flyby.ramble.common.properties.SecurityHttpProperties;
@@ -73,7 +74,7 @@ public class JwtFilter extends OncePerRequestFilter {
             return false;
         }
 
-        if (!authHeader.startsWith("Bearer ")) {
+        if (!authHeader.startsWith(JwtConstants.TOKEN_PREFIX)) {
             sendErrorResponse(response, ErrorCode.INVALID_ACCESS_TOKEN);
             return false;
         }

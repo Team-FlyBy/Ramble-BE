@@ -1,6 +1,7 @@
 package com.flyby.ramble.common.interceptor;
 
 import com.flyby.ramble.auth.util.JwtUtil;
+import com.flyby.ramble.common.constants.JwtConstants;
 import com.flyby.ramble.common.exception.BaseException;
 import com.flyby.ramble.common.exception.ErrorCode;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -56,7 +57,7 @@ public class WebSocketChannelInterceptor implements ChannelInterceptor {
             throw new BaseException(ErrorCode.MISSING_ACCESS_TOKEN);
         }
 
-        if (!header.startsWith("Bearer ")) {
+        if (!header.startsWith(JwtConstants.TOKEN_PREFIX)) {
             throw new BaseException(ErrorCode.INVALID_ACCESS_TOKEN);
         }
 

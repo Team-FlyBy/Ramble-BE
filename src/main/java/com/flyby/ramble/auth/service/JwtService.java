@@ -5,6 +5,7 @@ import com.flyby.ramble.auth.dto.Tokens;
 import com.flyby.ramble.auth.model.RefreshToken;
 import com.flyby.ramble.auth.repository.RefreshTokenRepository;
 import com.flyby.ramble.auth.util.JwtUtil;
+import com.flyby.ramble.common.constants.JwtConstants;
 import com.flyby.ramble.common.exception.BaseException;
 import com.flyby.ramble.common.exception.ErrorCode;
 import com.flyby.ramble.common.model.DeviceType;
@@ -51,9 +52,9 @@ public class JwtService {
 
     public Tokens reissueTokens(String refToken) {
         Claims refClaims = parseToken(refToken);
-        String jti       = refClaims.get("jti", String.class);
+        String jti       = refClaims.getId();
         UUID   userId    = UUID.fromString(refClaims.getSubject());
-        DeviceType type  = DeviceType.valueOf(refClaims.get("deviceType", String.class));
+        DeviceType type  = DeviceType.valueOf(refClaims.get(JwtConstants.CLAIM_DEVICE_TYPE, String.class));
 
         RefreshToken refreshToken = refreshTokenRepository.findByIdAndRevokedFalse(UUID.fromString(jti))
                 .orElseThrow(() -> {

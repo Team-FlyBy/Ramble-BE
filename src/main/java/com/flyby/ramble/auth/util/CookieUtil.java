@@ -1,5 +1,6 @@
 package com.flyby.ramble.auth.util;
 
+import com.flyby.ramble.common.constants.JwtConstants;
 import com.flyby.ramble.common.properties.JwtProperties;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,12 +15,10 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class CookieUtil {
 
-    private static final String REFRESH_COOKIE = "refresh";
-
     private final JwtProperties jwtProperties;
 
-    public Cookie createCookie(String name, String value) {
-        Cookie cookie = new Cookie(name, value);
+    public Cookie createCookie(String value) {
+        Cookie cookie = new Cookie(JwtConstants.REFRESH_COOKIE, value);
         cookie.setPath("/");
         cookie.setHttpOnly(true);
         cookie.setMaxAge((int) (jwtProperties.getRefreshExpiration() / 1000));
@@ -28,8 +27,8 @@ public class CookieUtil {
         return cookie;
     }
 
-    public ResponseCookie createResponseCookie(String name, String value) {
-        return ResponseCookie.from(name, value)
+    public ResponseCookie createResponseCookie(String value) {
+        return ResponseCookie.from(JwtConstants.REFRESH_COOKIE, value)
                 .path("/")
                 .httpOnly(true)
                 .maxAge(jwtProperties.getRefreshExpiration() / 1000)
@@ -39,7 +38,7 @@ public class CookieUtil {
     }
 
     public Optional<String> getCookie(HttpServletRequest request) {
-        Cookie cookie = WebUtils.getCookie(request, REFRESH_COOKIE);
+        Cookie cookie = WebUtils.getCookie(request, JwtConstants.REFRESH_COOKIE);
 
         return Optional.ofNullable(cookie)
                 .map(Cookie::getValue);

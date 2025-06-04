@@ -2,6 +2,7 @@ package com.flyby.ramble.oauth.handler;
 
 import com.flyby.ramble.auth.dto.Tokens;
 import com.flyby.ramble.auth.util.CookieUtil;
+import com.flyby.ramble.common.constants.JwtConstants;
 import com.flyby.ramble.oauth.model.CustomOidcUser;
 import com.flyby.ramble.auth.service.JwtService;
 import com.flyby.ramble.user.model.User;
@@ -19,8 +20,6 @@ import java.io.IOException;
 @Component
 @RequiredArgsConstructor
 public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
-
-    private static final String REFRESH_COOKIE = "refresh";
 
     private final JwtService jwtService;
     private final CookieUtil cookieUtil;
@@ -40,8 +39,8 @@ public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHa
     }
 
     private void sendResponse(Tokens tokens, HttpServletResponse response) {
-        response.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accToken());
-        response.addCookie(cookieUtil.createCookie(REFRESH_COOKIE, tokens.refToken()));
+        response.setHeader(HttpHeaders.AUTHORIZATION, JwtConstants.TOKEN_PREFIX + tokens.accToken());
+        response.addCookie(cookieUtil.createCookie(tokens.refToken()));
         response.setStatus(HttpServletResponse.SC_OK);
     }
 
