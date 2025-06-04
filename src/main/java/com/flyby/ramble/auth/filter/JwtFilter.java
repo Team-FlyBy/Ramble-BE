@@ -5,6 +5,7 @@ import com.flyby.ramble.auth.service.AuthService;
 import com.flyby.ramble.auth.util.JwtUtil;
 import com.flyby.ramble.common.exception.ErrorCode;
 import com.flyby.ramble.common.dto.ResponseDTO;
+import com.flyby.ramble.common.properties.SecurityHttpProperties;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -24,20 +25,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
-import java.util.List;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtFilter extends OncePerRequestFilter {
 
-    private static final List<String> EXCLUDED_URLS = List.of(
-            "/api-docs/**",
-            "/swagger-ui/**",
-            "/v3/api-docs/**",
-            "/ws/**",
-            "/auth/reissue"
-    );
+    private final SecurityHttpProperties securityHttpProperties;
 
     private final AuthService authService;
     private final JwtUtil jwtUtil;
@@ -46,7 +40,9 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String requestURI = request.getRequestURI();
-        return EXCLUDED_URLS.stream().anyMatch(pattern -> pathMatcher.match(pattern, requestURI));
+        return securityHttpProperties.getPermitPaths()
+                .stream()
+                .anyMatch(pattern -> pathMatcher.match(pattern, requestURI));
     }
 
     @Override
