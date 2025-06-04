@@ -3,16 +3,20 @@ package com.flyby.ramble.auth.filter;
 import com.flyby.ramble.auth.dto.JwtTokenRequest;
 import com.flyby.ramble.auth.service.AuthService;
 import com.flyby.ramble.auth.util.JwtUtil;
+import com.flyby.ramble.common.constants.JwtConstants;
 import com.flyby.ramble.common.model.DeviceType;
 import com.flyby.ramble.common.model.OAuthProvider;
+import com.flyby.ramble.common.properties.JwtProperties;
+import com.flyby.ramble.common.properties.SecurityHttpProperties;
 import com.flyby.ramble.user.model.Role;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -20,29 +24,27 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = JwtUtil.class)
-@TestPropertySource(properties = {
-        "jwt.secret=0123456789012345678901234567890123456789012345678901234567890123",
-        "jwt.issuer=test-issuer",
-        "jwt.expiration-ms.access=3600000",   // 1시간
-        "jwt.expiration-ms.refresh=604800000" // 7일
-})
+@DisplayName("JwtFilter 테스트")
+@ExtendWith(MockitoExtension.class)
 class JwtFilterTest {
 
     @Mock
     AuthService authService;
 
-    @Autowired
+    @Mock
+    SecurityHttpProperties securityHttpProperties;
+
+    @Mock
+    JwtProperties jwtProperties;
+
+    @InjectMocks
     JwtUtil jwtUtil;
 
     JwtFilter jwtFilter;
@@ -51,7 +53,8 @@ class JwtFilterTest {
 
     @BeforeEach
     void setUp() {
-        jwtFilter = new JwtFilter(authService, jwtUtil);
+        jwtFilter = new JwtFilter(securityHttpProperties, authService, jwtUtil);
+
         tokenRequest = new JwtTokenRequest(
                 UUID.randomUUID(),
                 UUID.randomUUID(),
@@ -60,18 +63,24 @@ class JwtFilterTest {
                 OAuthProvider.GOOGLE,
                 "1223456"
         );
+
+        given(jwtProperties.getSecret()).willReturn("JgKtV/W/r2HASGSNxeC6CCnDPJQJjNZMokMP0EqLD3I=");
     }
 
     @DisplayName("JWT 필터 테스트 - 유효한 토큰")
     @Test
     void doFilterInternal_validToken() throws Exception {
+        given(jwtProperties.getIssuer()).willReturn("test-issuer");
+        given(jwtProperties.getAccessExpiration()).willReturn(3600000L);
+        jwtUtil.init();
+
         // given
         String token = jwtUtil.generateAccToken(tokenRequest);
 
         MockHttpServletRequest request   = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+        request.addHeader(HttpHeaders.AUTHORIZATION, JwtConstants.TOKEN_PREFIX + token);
         FilterChain filterChain = mock(FilterChain.class);
 
         // when
@@ -92,6 +101,8 @@ class JwtFilterTest {
     @DisplayName("JWT 필터 테스트 - 토큰 X")
     @Test
     void doFilterInternal_noToken() throws Exception {
+        jwtUtil.init();
+
         // given
         MockHttpServletRequest request   = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
@@ -113,6 +124,9 @@ class JwtFilterTest {
     @DisplayName("JWT 필터 테스트 - 잘못된 토큰")
     @Test
     void doFilterInternal_invalidToken() throws Exception {
+        given(jwtProperties.getAccessExpiration()).willReturn(3600000L);
+        jwtUtil.init();
+
         // given
         String token = jwtUtil.generateAccToken(tokenRequest);
 
