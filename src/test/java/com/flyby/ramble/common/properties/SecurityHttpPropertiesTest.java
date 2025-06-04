@@ -14,7 +14,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 
-@DisplayName("JwtProperties 테스트")
+@DisplayName("SecurityHttpProperties 테스트")
 @ExtendWith(SpringExtension.class)
 @EnableConfigurationProperties(SecurityHttpProperties.class)
 @TestPropertySource(properties = {
@@ -34,7 +34,7 @@ class SecurityHttpPropertiesTest {
     @Autowired
     private SecurityHttpProperties securityHttpProperties;
 
-    @DisplayName("jwtProperties 생성 및 값 주입 테스트")
+    @DisplayName("SecurityHttpProperties 생성 및 값 주입 테스트")
     @Test
     void properties_should_be_bound_correctly() {
         assertThat(securityHttpProperties).isNotNull();
