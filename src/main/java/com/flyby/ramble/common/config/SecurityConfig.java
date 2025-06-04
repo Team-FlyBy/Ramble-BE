@@ -1,6 +1,7 @@
 package com.flyby.ramble.common.config;
 
 import com.flyby.ramble.auth.filter.JwtFilter;
+import com.flyby.ramble.common.properties.SecurityHttpProperties;
 import com.flyby.ramble.oauth.handler.OidcAuthenticationSuccessHandler;
 import com.flyby.ramble.oauth.service.CustomOidcUserService;
 import lombok.RequiredArgsConstructor;
@@ -21,29 +22,28 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Collections;
-
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final SecurityHttpProperties securityHttpProperties;
     private final JwtFilter jwtFilter;
 
     @Bean
     @Order(1)
     public SecurityFilterChain jwtSecurityFilterChain(HttpSecurity http) throws Exception {
-        RequestMatcher excluded = new OrRequestMatcher(
-                new AntPathRequestMatcher("/oauth2/authorize/**"),
-                new AntPathRequestMatcher("/oauth2/callback/**")
-        );
+        String[] permitPaths = securityHttpProperties.getPermitPaths()
+                .stream()
+                .map(String::trim)
+                .toArray(String[]::new);
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .securityMatcher(new NegatedRequestMatcher(excluded))
+                .securityMatcher(new NegatedRequestMatcher(oauth2PathsMatcher()))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws/**", "/auth/reissue").permitAll()
+                        .requestMatchers(permitPaths).permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -59,12 +59,7 @@ public class SecurityConfig {
                                                    OidcAuthenticationSuccessHandler successHandler) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .securityMatcher(
-                        new OrRequestMatcher(
-                                new AntPathRequestMatcher("/oauth2/authorize/**"),
-                                new AntPathRequestMatcher("/oauth2/callback/**")
-                        )
-                )
+                .securityMatcher(oauth2PathsMatcher())
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().permitAll())
                 .oauth2Login(oauth2 -> oauth2
@@ -82,14 +77,24 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(Collections.singletonList("*")); // TODO : 추후 FE로 변경
-        config.setAllowedMethods(Collections.singletonList("*"));        // TODO : 추후 변경
-        config.setAllowedHeaders(Collections.singletonList("*"));        // List.of(HttpHeaders.AUTHORIZATION, HttpHeaders.CONTENT_TYPE)
-        config.setAllowCredentials(true);
+        config.setAllowedOriginPatterns(securityHttpProperties.getAllowedOrigins());
+        config.setAllowedMethods(securityHttpProperties.getAllowedMethods());
+        config.setAllowedHeaders(securityHttpProperties.getAllowedHeaders());
+        config.setAllowCredentials(securityHttpProperties.isAllowCredentials());
+        config.setMaxAge(securityHttpProperties.getMaxAge());
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    private RequestMatcher oauth2PathsMatcher() {
+        return new OrRequestMatcher(
+                securityHttpProperties.getOAuth2Paths()
+                        .stream()
+                        .map(AntPathRequestMatcher::new)
+                        .toArray(AntPathRequestMatcher[]::new)
+        );
     }
 
 }
