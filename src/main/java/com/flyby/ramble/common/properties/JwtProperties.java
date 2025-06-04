@@ -1,6 +1,7 @@
 package com.flyby.ramble.common.properties;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -24,10 +25,10 @@ public class JwtProperties {
     @Getter
     public static class Expiration {
 
-        @NotBlank
+        @Positive
         private long access;
 
-        @NotBlank
+        @Positive
         private long refresh;
 
     }

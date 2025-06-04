@@ -1,6 +1,7 @@
 package com.flyby.ramble.common.properties;
 
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -40,7 +41,7 @@ public class SecurityHttpProperties {
         @NotEmpty
         private boolean allowCredentials;
 
-        @NotEmpty
+        @Positive
         private long maxAge; // Default to 1 hour
 
     }
