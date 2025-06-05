@@ -47,7 +47,7 @@ class JwtUtilTest {
                 "1223456"
         );
 
-        given(jwtProperties.getSecret()).willReturn("JgKtV/W/r2HASGSNxeC6CCnDPJQJjNZMokMP0EqLD3I=");
+        given(jwtProperties.getSecret()).willReturn("TestJwtSecretKeyForUnitTestingOnlyMP0EqLD3I=");
         given(jwtProperties.getIssuer()).willReturn("test-issuer");
     }
 

@@ -64,7 +64,7 @@ class JwtFilterTest {
                 "1223456"
         );
 
-        given(jwtProperties.getSecret()).willReturn("JgKtV/W/r2HASGSNxeC6CCnDPJQJjNZMokMP0EqLD3I=");
+        given(jwtProperties.getSecret()).willReturn("TestJwtSecretKeyForUnitTestingOnlyMP0EqLD3I=");
     }
 
     @DisplayName("JWT 필터 테스트 - 유효한 토큰")

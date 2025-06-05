@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(SpringExtension.class)
 @EnableConfigurationProperties(JwtProperties.class)
 @TestPropertySource(properties = {
-        "jwt.secret=JgKtV/W/r2HASGSNxeC6CCnDPJQJjNZMokMP0EqLD3I=",
+        "jwt.secret=TestJwtSecretKeyForUnitTestingOnlyMP0EqLD3I=",
         "jwt.issuer=test-issuer",
         "jwt.expiration.access=3600000",
         "jwt.expiration.refresh=604800000"
@@ -28,7 +28,7 @@ class JwtPropertiesTest {
     @Test
     void properties_should_be_bound_correctly() {
         assertThat(jwtProperties).isNotNull();
-        assertThat(jwtProperties.getSecret()).isEqualTo("JgKtV/W/r2HASGSNxeC6CCnDPJQJjNZMokMP0EqLD3I=");
+        assertThat(jwtProperties.getSecret()).isEqualTo("TestJwtSecretKeyForUnitTestingOnlyMP0EqLD3I=");
         assertThat(jwtProperties.getIssuer()).isEqualTo("test-issuer");
         assertThat(jwtProperties.getAccessExpiration()).isEqualTo(3600000L);
         assertThat(jwtProperties.getRefreshExpiration()).isEqualTo(604800000L);
