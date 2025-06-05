@@ -1,8 +1,10 @@
 package com.flyby.ramble.auth.util;
 
+import com.flyby.ramble.common.constants.JwtConstants;
+import com.flyby.ramble.common.properties.JwtProperties;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.WebUtils;
@@ -10,35 +12,33 @@ import org.springframework.web.util.WebUtils;
 import java.util.Optional;
 
 @Component
+@RequiredArgsConstructor
 public class CookieUtil {
 
-    private static final String REFRESH_COOKIE = "refresh";
+    private final JwtProperties jwtProperties;
 
-    @Value("${jwt.expiration-ms.refresh}")
-    private long expiration;
-
-    public Cookie createCookie(String name, String value) {
-        Cookie cookie = new Cookie(name, value);
+    public Cookie createCookie(String value) {
+        Cookie cookie = new Cookie(JwtConstants.REFRESH_COOKIE, value);
         cookie.setPath("/");
         cookie.setHttpOnly(true);
-        cookie.setMaxAge((int) (expiration / 1000));
+        cookie.setMaxAge((int) (jwtProperties.getRefreshExpiration() / 1000));
         cookie.setSecure(true);
         cookie.setAttribute("SameSite", "Lax");
         return cookie;
     }
 
-    public ResponseCookie createResponseCookie(String name, String value) {
-        return ResponseCookie.from(name, value)
+    public ResponseCookie createResponseCookie(String value) {
+        return ResponseCookie.from(JwtConstants.REFRESH_COOKIE, value)
                 .path("/")
                 .httpOnly(true)
-                .maxAge(expiration / 1000)
+                .maxAge(jwtProperties.getRefreshExpiration() / 1000)
                 .secure(true)
                 .sameSite("Lax")
                 .build();
     }
 
     public Optional<String> getCookie(HttpServletRequest request) {
-        Cookie cookie = WebUtils.getCookie(request, REFRESH_COOKIE);
+        Cookie cookie = WebUtils.getCookie(request, JwtConstants.REFRESH_COOKIE);
 
         return Optional.ofNullable(cookie)
                 .map(Cookie::getValue);

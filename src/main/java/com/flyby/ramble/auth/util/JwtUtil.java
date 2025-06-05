@@ -1,6 +1,8 @@
 package com.flyby.ramble.auth.util;
 
 import com.flyby.ramble.auth.dto.JwtTokenRequest;
+import com.flyby.ramble.common.constants.JwtConstants;
+import com.flyby.ramble.common.properties.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
@@ -8,8 +10,8 @@ import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.WeakKeyException;
 import jakarta.annotation.PostConstruct;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -24,19 +26,10 @@ import java.util.*;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class JwtUtil {
 
-    @Value("${jwt.secret}")
-    private String secret;
-
-    @Value("${jwt.issuer}")
-    private String issuer;
-
-    @Value("${jwt.expiration-ms.access}")
-    private long accessExpiration;
-
-    @Value("${jwt.expiration-ms.refresh}")
-    private long refreshExpiration;
+    private final JwtProperties jwtProperties;
 
     private SecretKey secretKey;
     private JwtParser jwtParser;
@@ -44,7 +37,7 @@ public class JwtUtil {
     @PostConstruct
     public void init() {
         try {
-            byte[] secretBytes = Base64.getDecoder().decode(secret);
+            byte[] secretBytes = Base64.getDecoder().decode(jwtProperties.getSecret());
             secretKey = Keys.hmacShaKeyFor(secretBytes);
             jwtParser = Jwts.parser().verifyWith(secretKey).build();
         } catch (WeakKeyException e) {
@@ -68,7 +61,7 @@ public class JwtUtil {
     public Authentication parseAuthentication(String token) {
         Claims claims = parseClaims(token);
         String userId = claims.getSubject();
-        String role   = claims.get("role", String.class);
+        String role   = claims.get(JwtConstants.CLAIM_AUTHORITIES, String.class);
 
         List<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(role));
 
@@ -82,11 +75,11 @@ public class JwtUtil {
     }
 
     public String generateAccToken(JwtTokenRequest request) {
-        return createToken(request,"access", accessExpiration);
+        return createToken(request, JwtConstants.TOKEN_TYPE_ACCESS,  jwtProperties.getAccessExpiration());
     }
 
     public String generateRefToken(JwtTokenRequest request) {
-        return createToken(request,"refresh", refreshExpiration);
+        return createToken(request, JwtConstants.TOKEN_TYPE_REFRESH, jwtProperties.getRefreshExpiration());
     }
 
     private String createToken(@NonNull JwtTokenRequest request, @NonNull String tokenType, long expiration) {
@@ -94,18 +87,18 @@ public class JwtUtil {
         Instant expiry = now.plusMillis(expiration);
 
         Map<String, Object> claims = Map.of(
-                "jti",  request.jti().toString(),
-                "role", request.role().name(),
-                "type", tokenType,
-                "deviceType", request.deviceType().name(),
-                "provider",   request.provider().name(),
-                "providerId", request.providerId()
+                JwtConstants.CLAIM_AUTHORITIES, request.role().name(),
+                JwtConstants.CLAIM_TOKEN_TYPE,  tokenType,
+                JwtConstants.CLAIM_DEVICE_TYPE, request.deviceType().name(),
+                JwtConstants.CLAIM_PROVIDER,    request.provider().name(),
+                JwtConstants.CLAIM_PROVIDER_ID, request.providerId()
         );
 
         return Jwts.builder()
+                .id(request.jti().toString())
                 .claims(claims)
                 .subject(request.userExternalId().toString())
-                .issuer(issuer)
+                .issuer(jwtProperties.getIssuer())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiry))
                 .signWith(secretKey)

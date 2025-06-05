@@ -5,15 +5,16 @@ import com.flyby.ramble.auth.dto.Tokens;
 import com.flyby.ramble.auth.model.RefreshToken;
 import com.flyby.ramble.auth.repository.RefreshTokenRepository;
 import com.flyby.ramble.auth.util.JwtUtil;
+import com.flyby.ramble.common.constants.JwtConstants;
 import com.flyby.ramble.common.exception.BaseException;
 import com.flyby.ramble.common.exception.ErrorCode;
 import com.flyby.ramble.common.model.DeviceType;
+import com.flyby.ramble.common.properties.JwtProperties;
 import com.flyby.ramble.user.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,8 +30,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class JwtService {
 
-    @Value("${jwt.expiration-ms.refresh}")
-    private long refreshExpiration;
+    private final JwtProperties jwtProperties;
 
     private final JwtUtil jwtUtil;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -52,9 +52,9 @@ public class JwtService {
 
     public Tokens reissueTokens(String refToken) {
         Claims refClaims = parseToken(refToken);
-        String jti       = refClaims.get("jti", String.class);
+        String jti       = refClaims.getId();
         UUID   userId    = UUID.fromString(refClaims.getSubject());
-        DeviceType type  = DeviceType.valueOf(refClaims.get("deviceType", String.class));
+        DeviceType type  = DeviceType.valueOf(refClaims.get(JwtConstants.CLAIM_DEVICE_TYPE, String.class));
 
         RefreshToken refreshToken = refreshTokenRepository.findByIdAndRevokedFalse(UUID.fromString(jti))
                 .orElseThrow(() -> {
@@ -88,7 +88,7 @@ public class JwtService {
 
     private RefreshToken createRefreshToken(User user, JwtTokenRequest request) {
         LocalDateTime exp = Instant.now()
-                .plusMillis(refreshExpiration)
+                .plusMillis(jwtProperties.getRefreshExpiration())
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime();
 

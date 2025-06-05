@@ -5,6 +5,7 @@ import com.flyby.ramble.auth.service.AuthService;
 import com.flyby.ramble.auth.service.JwtService;
 import com.flyby.ramble.auth.util.CookieUtil;
 import com.flyby.ramble.common.model.DeviceType;
+import com.flyby.ramble.common.constants.JwtConstants;
 import com.flyby.ramble.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,21 +21,19 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/auth")
 public class AuthController {
 
-    private static final String REFRESH_COOKIE = "refresh";
-
     // TODO: 추후에 Facade 패턴 적용 고려
     // TODO: SwaggerApi 어노테이션 적용
 
     private final AuthService authService;
     private final UserService userService;
-    private final JwtService jwtService;
-    private final CookieUtil cookieUtil;
+    private final JwtService  jwtService;
+    private final CookieUtil  cookieUtil;
 
     @PostMapping("/reissue")
-    public ResponseEntity<Void> reissueToken(@CookieValue(REFRESH_COOKIE) String cookie) {
-        Tokens tokens = jwtService.reissueTokens(cookie);
-        String accToken = "Bearer " + tokens.accToken();
-        String refToken = cookieUtil.createResponseCookie(REFRESH_COOKIE, tokens.refToken()).toString();
+    public ResponseEntity<Void> reissueToken(@CookieValue(JwtConstants.REFRESH_COOKIE) String cookie) {
+        Tokens tokens   = jwtService.reissueTokens(cookie);
+        String accToken = JwtConstants.TOKEN_PREFIX + tokens.accToken();
+        String refToken = cookieUtil.createResponseCookie(tokens.refToken()).toString();
 
         return ResponseEntity.noContent()
                 .header(HttpHeaders.AUTHORIZATION, accToken)
@@ -45,9 +44,9 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String header,
                                        @AuthenticationPrincipal UserDetails user) {
-        String token = header.substring(7).trim();
+        String token = extractToken(header);
 
-        jwtService.revokeAllRefreshToken(user.getUsername(), DeviceType.WEB);
+        jwtService.revokeAllRefreshTokenByUserAndDevice(user.getUsername(), DeviceType.WEB);
         authService.putBlackList(token);
 
         return ResponseEntity.noContent().build();
@@ -57,13 +56,17 @@ public class AuthController {
     @PostMapping("/withdraw")
     public ResponseEntity<Void> withdraw(@RequestHeader(HttpHeaders.AUTHORIZATION) String header,
                                          @AuthenticationPrincipal UserDetails user) {
-        String token = header.substring(7).trim();
+        String token = extractToken(header);
 
-        jwtService.revokeAllRefreshToken(user.getUsername());
+        jwtService.revokeAllRefreshTokenByUser(user.getUsername());
         authService.putBlackList(token);
         userService.withdraw(user.getUsername());
 
         return ResponseEntity.noContent().build();
+    }
+
+    private String extractToken(String authHeader) {
+        return authHeader.substring(7).trim();
     }
 
 }
