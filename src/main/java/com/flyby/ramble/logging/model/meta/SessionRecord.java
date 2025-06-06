@@ -28,7 +28,7 @@ import java.util.UUID;
                 @UniqueConstraint(name = "uk_session_record_uuid", columnNames = "record_uuid")
         },
         indexes = {
-                @Index(name = "idx_session_record_uuid", columnList = "reocrd_uuid")
+                @Index(name = "idx_session_record_uuid", columnList = "record_uuid")
         }
 )
 public class SessionRecord extends BaseEntity {

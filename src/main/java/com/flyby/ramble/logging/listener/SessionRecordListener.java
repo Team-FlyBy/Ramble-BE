@@ -4,6 +4,7 @@ import com.flyby.ramble.logging.dto.CreateSessionRecordCommandDTO;
 import com.flyby.ramble.logging.service.SessionRecordService;
 import com.flyby.ramble.session.event.SessionEndedEvent;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
@@ -12,11 +13,14 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class SessionRecordListener {
     private final SessionRecordService sessionRecordService;
 
     @EventListener
     public void handle(SessionEndedEvent event) {
+        log.debug("received sessionEndedEvent: {}", event);
+
         sessionRecordService.createSessionRecord(
                 CreateSessionRecordCommandDTO.builder()
                         .sessionUuid(event.getSessionUuid())
