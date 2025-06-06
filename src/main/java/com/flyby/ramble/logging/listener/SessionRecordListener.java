@@ -1,0 +1,32 @@
+package com.flyby.ramble.logging.listener;
+
+import com.flyby.ramble.logging.dto.CreateSessionRecordCommandDTO;
+import com.flyby.ramble.logging.service.SessionRecordService;
+import com.flyby.ramble.session.event.SessionEndedEvent;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * 세션 레코드 이벤트 리스너
+ */
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class SessionRecordListener {
+    private final SessionRecordService sessionRecordService;
+
+    @EventListener
+    public void handle(SessionEndedEvent event) {
+        log.debug("received sessionEndedEvent: {}", event);
+
+        sessionRecordService.createSessionRecord(
+                CreateSessionRecordCommandDTO.builder()
+                        .sessionUuid(event.getSessionUuid())
+                        .startedAt(event.getStartedAt())
+                        .endedAt(event.getEndedAt())
+                        .build()
+        );
+    }
+}

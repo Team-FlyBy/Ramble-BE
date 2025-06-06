@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: ramble
+
+  profiles:
+    active: dev
+    include: common, swagger, secret
