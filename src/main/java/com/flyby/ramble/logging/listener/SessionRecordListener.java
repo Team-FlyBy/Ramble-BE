@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class SessionRecordListener {
-
     private final SessionRecordService sessionRecordService;
 
     @EventListener
