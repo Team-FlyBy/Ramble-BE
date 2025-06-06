@@ -19,6 +19,16 @@ public class SessionEndedEvent {
 
     @Builder
     public SessionEndedEvent(UUID sessionUuid, LocalDateTime startedAt, LocalDateTime endedAt) {
+        if (sessionUuid == null) {
+            throw new IllegalArgumentException("UUID must not be null");
+        }
+        if (startedAt == null || endedAt == null) {
+            throw new IllegalArgumentException("Both startedAt and endedAt must not be null");
+        }
+        if (endedAt.isBefore(startedAt)) {
+            throw new IllegalArgumentException("endedAt must be after startedAt");
+        }
+
         this.sessionUuid = sessionUuid;
         this.startedAt = startedAt;
         this.endedAt = endedAt;

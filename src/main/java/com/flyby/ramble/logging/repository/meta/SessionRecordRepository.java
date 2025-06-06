@@ -8,4 +8,6 @@ import java.util.UUID;
 
 public interface SessionRecordRepository extends JpaRepository<SessionRecord, Long> {
     Optional<SessionRecord> findByUuid(UUID uuid);
+
+    boolean existsByUuid(UUID uuid);
 }

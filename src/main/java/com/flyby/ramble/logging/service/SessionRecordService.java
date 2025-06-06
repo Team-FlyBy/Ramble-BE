@@ -18,6 +18,10 @@ public class SessionRecordService {
      */
     @Transactional
     public void createSessionRecord(CreateSessionRecordCommandDTO commandDTO) {
+        if (sessionRecordRepository.existsByUuid(commandDTO.getSessionUuid())) {
+            throw new IllegalStateException("이미 존재하는 세션 UUID입니다: " + commandDTO.getSessionUuid());
+        }
+
         SessionRecord sessionRecord = SessionRecord.builder()
                 .uuid(commandDTO.getSessionUuid())
                 .startedAt(commandDTO.getStartedAt())
