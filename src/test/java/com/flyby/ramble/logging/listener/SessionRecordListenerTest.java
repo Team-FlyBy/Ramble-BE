@@ -9,15 +9,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
+@EnableAsync
 @Transactional
 class SessionRecordListenerTest {
 
@@ -43,9 +47,10 @@ class SessionRecordListenerTest {
         // when
         eventPublisher.publishEvent(sessionEndedEvent);
 
-        // then
-        SessionRecord sessionRecord = sessionRecordRepository.findByUuid(sessionUuid).get();
-
-        assertThat(sessionRecord).isNotNull();
+        // then - Awaitility로 비동기 작업 대기
+        await().atMost(5, TimeUnit.SECONDS).untilAsserted(() -> {
+            SessionRecord sessionRecord = sessionRecordRepository.findByUuid(sessionUuid).orElse(null);
+            assertThat(sessionRecord).isNotNull();
+        });
     }
 }

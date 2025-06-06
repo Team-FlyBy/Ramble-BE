@@ -19,6 +19,7 @@ public class SessionRecordListener {
     private final SessionRecordService sessionRecordService;
 
     @EventListener
+    @Async
     public void handle(SessionEndedEvent event) {
         log.debug("received sessionEndedEvent: {}", event);
         try {
