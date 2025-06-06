@@ -12,6 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class SessionRecordService {
     private final SessionRecordRepository sessionRecordRepository;
 
+    /**
+     * 세션 레코드 생성
+     * @param commandDTO
+     */
     @Transactional
     public void createSessionRecord(CreateSessionRecordCommandDTO commandDTO) {
         SessionRecord sessionRecord = SessionRecord.builder()

@@ -7,6 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+/**
+ * 세션 레코드 이벤트 리스너
+ */
 @Component
 @RequiredArgsConstructor
 public class SessionRecordListener {

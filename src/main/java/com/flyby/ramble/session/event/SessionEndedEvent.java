@@ -6,6 +6,9 @@ import lombok.Getter;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+/**
+ * 세션 종료 이벤트
+ */
 @Getter
 public class SessionEndedEvent {
     private final UUID sessionUuid;
