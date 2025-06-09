@@ -6,7 +6,6 @@ updates:
     schedule:
       interval: "weekly"  # "daily", "weekly", "monthly"
     open-pull-requests-limit: 5
-    versioning-strategy: "increase"
     ignore:
       - dependency-name: "org.springframework.boot:spring-boot"
         update-types: [ "version-update:semver-major" ]
