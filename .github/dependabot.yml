@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # Gradle 기반 Spring Boot 의존성 업데이트
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"  # "daily", "weekly", "monthly"
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "org.springframework.boot:spring-boot"
+        update-types: [ "version-update:semver-major" ]
+
+  # GitHub Actions 워크플로우 업데이트
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 2
