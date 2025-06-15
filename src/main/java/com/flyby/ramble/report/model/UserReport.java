@@ -11,10 +11,18 @@ import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
+/**
+ * 사용자 신고 테이블
+ */
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "user_reports")
+@Table(
+        name = "user_reports",
+        indexes = {
+                @Index(name = "idx_reported_user_and_status", columnList = "reported_user_id, status")
+        }
+)
 public class UserReport extends BaseEntity {
 
     @Id
@@ -29,31 +37,39 @@ public class UserReport extends BaseEntity {
             unique = true)
     private UUID externalId;
 
-    @ManyToOne
-    @Column(name = "reported_user_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reported_user_id", nullable = false)
     private User reportedUser;
 
-    @ManyToOne
-    @Column(name = "reporting_user_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reporting_user_id", nullable = false)
     private User reportingUser;
 
-    @ManyToOne
-    @Column(name = "session_id", nullable = false, updatable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "session_id", nullable = false, updatable = false)
     private Session session;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private ReportReason reason;
 
     @Column(length = 1000)
     private String detail;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private UserReportStatus status;
+
     @Builder
-    public UserReport(User reportedUser, User reportingUser, Session session, ReportReason reason, String detail) {
+    public UserReport(User reportedUser, User reportingUser, Session session,
+                      ReportReason reason, String detail, UserReportStatus status) {
         this.externalId = UUID.randomUUID();
         this.reportedUser = reportedUser;
         this.reportingUser = reportingUser;
         this.session = session;
         this.reason = reason;
         this.detail = detail;
+        this.status = status;
     }
 }
+
