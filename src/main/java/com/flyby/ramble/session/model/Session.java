@@ -3,6 +3,7 @@ package com.flyby.ramble.session.model;
 import com.flyby.ramble.common.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -14,6 +15,7 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "sessions")
 public class Session extends BaseEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "session_id")
@@ -28,4 +30,13 @@ public class Session extends BaseEntity {
 
     @Column(name = "started_at", nullable = false)
     private LocalDateTime startedAt;
+
+    @Builder
+    public Session(LocalDateTime startedAt) {
+        if (startedAt == null) {
+            throw new IllegalArgumentException("startedAt은 null일 수 없습니다.");
+        }
+        this.externalId = UUID.randomUUID();
+        this.startedAt = startedAt;
+    }
 }
