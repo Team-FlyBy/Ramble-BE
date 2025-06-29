@@ -2,7 +2,7 @@ package com.flyby.ramble.user.service;
 
 import com.flyby.ramble.common.exception.BaseException;
 import com.flyby.ramble.common.exception.ErrorCode;
-import com.flyby.ramble.common.model.OAuthProvider;
+import com.flyby.ramble.oauth.dto.OAuthRegisterDTO;
 import com.flyby.ramble.user.model.Status;
 import com.flyby.ramble.user.model.User;
 import com.flyby.ramble.user.repository.UserRepository;
@@ -22,17 +22,17 @@ public class UserService {
 
     // TODO: 동일한 유저의 중복 생성 가능성 판단 후 수정
     // TODO: 커스텀 예외 처리 추후 추가
-    public User registerOrLogin(String email, String username, OAuthProvider provider, String providerId) {
+    public User registerOrLogin(OAuthRegisterDTO oAuthRegisterDTO) {
         try {
-            return userRepository.findByProviderAndProviderId(provider, providerId)
+            return userRepository.findByProviderAndProviderId(oAuthRegisterDTO.provider(), oAuthRegisterDTO.providerId())
                     .orElseGet(() -> userRepository.save(User.builder()
-                            .email(email)
-                            .username(username)
-                            .provider(provider)
-                            .providerId(providerId)
+                            .email(oAuthRegisterDTO.email())
+                            .username(oAuthRegisterDTO.username())
+                            .provider(oAuthRegisterDTO.provider())
+                            .providerId(oAuthRegisterDTO.providerId())
                             .build()));
         } catch (DataIntegrityViolationException e) {
-            return userRepository.findByProviderAndProviderId(provider, providerId)
+            return userRepository.findByProviderAndProviderId(oAuthRegisterDTO.provider(), oAuthRegisterDTO.providerId())
                     .orElseThrow(() -> new IllegalArgumentException("예상치 못한 오류가 발생했습니다", e));
         }
     }
