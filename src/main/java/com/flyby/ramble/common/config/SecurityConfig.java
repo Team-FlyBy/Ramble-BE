@@ -2,12 +2,9 @@ package com.flyby.ramble.common.config;
 
 import com.flyby.ramble.auth.filter.JwtFilter;
 import com.flyby.ramble.common.properties.SecurityHttpProperties;
-import com.flyby.ramble.oauth.handler.OidcAuthenticationSuccessHandler;
-import com.flyby.ramble.oauth.service.CustomOidcUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -31,7 +28,6 @@ public class SecurityConfig {
     private final JwtFilter jwtFilter;
 
     @Bean
-    @Order(1)
     public SecurityFilterChain jwtSecurityFilterChain(HttpSecurity http) throws Exception {
         String[] permitPaths = securityHttpProperties.getPermitPaths()
                 .stream()
@@ -53,33 +49,12 @@ public class SecurityConfig {
     }
 
     @Bean
-    @Order(2)
-    public SecurityFilterChain oauth2SecurityFilterChain(HttpSecurity http,
-                                                   CustomOidcUserService customOidcUserService,
-                                                   OidcAuthenticationSuccessHandler successHandler) throws Exception {
-        http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .securityMatcher(oauth2PathsMatcher())
-                .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll())
-                .oauth2Login(oauth2 -> oauth2
-                        .authorizationEndpoint(auth -> auth.baseUri("/oauth2/authorize"))
-                        .redirectionEndpoint(redir -> redir.baseUri("/oauth2/callback/*"))
-                        .userInfoEndpoint(info -> info.oidcUserService(customOidcUserService))
-                        .successHandler(successHandler))
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .csrf(AbstractHttpConfigurer::disable);
-
-        return http.build();
-    }
-
-    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(securityHttpProperties.getAllowedOrigins());
         config.setAllowedMethods(securityHttpProperties.getAllowedMethods());
         config.setAllowedHeaders(securityHttpProperties.getAllowedHeaders());
+        config.setExposedHeaders(securityHttpProperties.getAllowedHeaders());
         config.setAllowCredentials(securityHttpProperties.isAllowCredentials());
         config.setMaxAge(securityHttpProperties.getMaxAge());
 
