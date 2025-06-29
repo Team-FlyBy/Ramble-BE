@@ -5,6 +5,7 @@ import com.flyby.ramble.auth.util.CookieUtil;
 import com.flyby.ramble.common.constants.JwtConstants;
 import com.flyby.ramble.oauth.dto.OAuthRequestDTO;
 import com.flyby.ramble.oauth.service.OAuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +23,7 @@ public class OAuthController {
     private final CookieUtil cookieUtil;
 
     @PostMapping("/login/google")
-    public ResponseEntity<Void> login(@RequestBody OAuthRequestDTO request) {
+    public ResponseEntity<Void> login(@Valid @RequestBody OAuthRequestDTO request) {
         Tokens tokens   = oAuthService.getGoogleUserInfo(request);
         String accToken = JwtConstants.TOKEN_PREFIX + tokens.accToken();
         String refToken = cookieUtil.createResponseCookie(tokens.refToken()).toString();
