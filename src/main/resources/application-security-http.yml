@@ -4,6 +4,7 @@ security:
       - /oauth2/authorize/**
       - /oauth2/callback/**
     permit-paths:
+      - /oauth/login/google
       - /api-docs/**
       - /v3/api-docs/**
       - /swagger-ui/**
