@@ -26,6 +26,7 @@ public class OAuthService {
 
     private final UserService userService;
     private final JwtService jwtService;
+    private final OidcTokenParser oidcTokenParser;
 
     private final ClientRegistrationRepository clientRegistrationRepo;
 
@@ -55,7 +56,7 @@ public class OAuthService {
         OAuth2AccessTokenResponse tokenResponse = accessTokenResponseClient.getTokenResponse(grantRequest);
         String idToken = (String) tokenResponse.getAdditionalParameters().get("id_token");
 
-        OAuthRegisterDTO registerDTO = OidcTokenParser.parseGoogleIdToken(idToken);
+        OAuthRegisterDTO registerDTO = oidcTokenParser.parseGoogleIdToken(idToken);
         User user = userService.registerOrLogin(registerDTO);
 
         return jwtService.generateTokens(user);
