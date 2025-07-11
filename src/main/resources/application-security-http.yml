@@ -4,12 +4,12 @@ security:
       - /oauth2/authorize/**
       - /oauth2/callback/**
     permit-paths:
-      - /oauth/login/google
       - /api-docs/**
       - /v3/api-docs/**
       - /swagger-ui/**
       - /ws/**
       - /auth/reissue
+      - /oauth/**
     cors:
       allowed-origins: # TODO : 추후 FE로 변경
         - "*"
