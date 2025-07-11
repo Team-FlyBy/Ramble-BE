@@ -2,7 +2,7 @@ package com.flyby.ramble.oauth.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
-public record OAuthRequestDTO(
+public record OAuthPkceDTO(
         @NotBlank(message = "Authorization code is required")
         String code,
         @NotBlank(message = "Code verifier is required")
