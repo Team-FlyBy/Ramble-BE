@@ -2,8 +2,9 @@ package com.flyby.ramble.oauth.service;
 
 import com.flyby.ramble.auth.dto.Tokens;
 import com.flyby.ramble.auth.service.JwtService;
+import com.flyby.ramble.oauth.dto.OAuthIdTokenDTO;
 import com.flyby.ramble.oauth.dto.OAuthRegisterDTO;
-import com.flyby.ramble.oauth.dto.OAuthRequestDTO;
+import com.flyby.ramble.oauth.dto.OAuthPkceDTO;
 import com.flyby.ramble.oauth.util.OidcTokenParser;
 import com.flyby.ramble.user.model.User;
 import com.flyby.ramble.user.service.UserService;
@@ -30,7 +31,25 @@ public class OAuthService {
 
     private final ClientRegistrationRepository clientRegistrationRepo;
 
-    public Tokens getGoogleUserInfo(OAuthRequestDTO request) {
+    public Tokens getTokensFromGoogleUser(OAuthPkceDTO request) {
+        String idToken = getGoogleIdToken(request.code(), request.codeVerifier(), request.redirectUri());
+
+        OAuthRegisterDTO registerDTO = oidcTokenParser.parseGoogleIdToken(idToken);
+        User user = userService.registerOrLogin(registerDTO);
+
+        return jwtService.generateTokens(user);
+    }
+
+    public Tokens getTokensFromGoogleIdToken(OAuthIdTokenDTO request) {
+        String idToken = request.token();
+
+        OAuthRegisterDTO registerDTO = oidcTokenParser.parseGoogleIdToken(idToken);
+        User user = userService.registerOrLogin(registerDTO);
+
+        return jwtService.generateTokens(user);
+    }
+
+    private String getGoogleIdToken(String code, String codeVerifier, String redirectUri) {
         ClientRegistration registration = clientRegistrationRepo.findByRegistrationId("google");
 
         OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> accessTokenResponseClient =
@@ -42,24 +61,19 @@ public class OAuthService {
                         OAuth2AuthorizationRequest.authorizationCode()
                                 .clientId(registration.getClientId())
                                 .authorizationUri(registration.getProviderDetails().getAuthorizationUri())
-                                .redirectUri(request.redirectUri())
+                                .redirectUri(redirectUri)
                                 .attributes(Map.of(
-                                        PkceParameterNames.CODE_VERIFIER, request.codeVerifier()
+                                        PkceParameterNames.CODE_VERIFIER, codeVerifier
                                 ))
                                 .build(),
-                        OAuth2AuthorizationResponse.success(request.code())
-                                .redirectUri(request.redirectUri())
+                        OAuth2AuthorizationResponse.success(code)
+                                .redirectUri(redirectUri)
                                 .build()
                 )
         );
 
         OAuth2AccessTokenResponse tokenResponse = accessTokenResponseClient.getTokenResponse(grantRequest);
-        String idToken = (String) tokenResponse.getAdditionalParameters().get("id_token");
-
-        OAuthRegisterDTO registerDTO = oidcTokenParser.parseGoogleIdToken(idToken);
-        User user = userService.registerOrLogin(registerDTO);
-
-        return jwtService.generateTokens(user);
+        return tokenResponse.getAdditionalParameters().get("id_token").toString();
     }
 
 }
