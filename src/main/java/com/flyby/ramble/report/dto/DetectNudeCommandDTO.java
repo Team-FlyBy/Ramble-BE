@@ -4,22 +4,20 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DetectNudeCommandDTO {
-    private UUID reportedUserUuid;
-    private UUID reportingUserUuid;
-    private UUID sessionUuid;
-    private String snapshotUrl;
+    private UUID reportUuid;
+    private MultipartFile peerVideoSnapshot;
 
     @Builder
-    public DetectNudeCommandDTO(UUID reportedUserUuid, UUID reportingUserUuid, UUID sessionUuid, String snapshotUrl) {
-        this.reportedUserUuid = reportedUserUuid;
-        this.reportingUserUuid = reportingUserUuid;
-        this.sessionUuid = sessionUuid;
-        this.snapshotUrl = snapshotUrl;
+    public DetectNudeCommandDTO(UUID reportUuid,
+                                MultipartFile peerVideoSnapshot) {
+        this.reportUuid = reportUuid;
+        this.peerVideoSnapshot = peerVideoSnapshot;
     }
 }

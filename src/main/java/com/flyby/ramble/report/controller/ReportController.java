@@ -19,7 +19,7 @@ public class ReportController {
 
     @PostMapping("/reports")
     public ResponseEntity<Void> reportByUser(@RequestPart("request") ReportUserRequestDTO requestDTO,
-                                             @RequestPart("peerVideoSnapshot") MultipartFile peerVideoSnapshot) {
+                                             @RequestPart(value = "peerVideoSnapshot", required = false) MultipartFile peerVideoSnapshot) {
         log.debug("User report request received: {}", requestDTO);
         reportService.reportByUser(requestDTO, peerVideoSnapshot);
         return ResponseEntity.status(HttpStatus.CREATED).build();
