@@ -4,11 +4,13 @@ updates:
   - package-ecosystem: "gradle"
     directory: "/"
     schedule:
-      interval: "weekly"  # "daily", "weekly", "monthly"
+      interval: "monthly"  # "daily", "weekly", "monthly"
     open-pull-requests-limit: 5
     ignore:
       - dependency-name: "org.springframework.boot:spring-boot"
         update-types: [ "version-update:semver-major" ]
+    assignees:
+      - "dependabot-bot"
 
   # GitHub Actions 워크플로우 업데이트
   - package-ecosystem: "github-actions"
@@ -16,3 +18,5 @@ updates:
     schedule:
       interval: "monthly"
     open-pull-requests-limit: 2
+    assignees:
+      - "dependabot-bot"

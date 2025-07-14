@@ -9,6 +9,7 @@ security:
       - /swagger-ui/**
       - /ws/**
       - /auth/reissue
+      - /oauth/**
     cors:
       allowed-origins: # TODO : 추후 FE로 변경
         - "*"
