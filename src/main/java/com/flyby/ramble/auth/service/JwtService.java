@@ -35,12 +35,9 @@ public class JwtService {
     private final JwtUtil jwtUtil;
     private final RefreshTokenRepository refreshTokenRepository;
 
-    // TODO: DeviceType 구분 로직 필요, 현재는 WEB으로 고정
-    // TODO: jwt 파싱 안 하고 생성한 정보를 기반으로 db에 저장하게
-
-    public Tokens generateTokens(User user) {
-        JwtTokenRequest accRequest = JwtTokenRequest.of(user, DeviceType.WEB);
-        JwtTokenRequest refRequest = JwtTokenRequest.of(user, DeviceType.WEB);
+    public Tokens generateTokens(User user, DeviceType deviceType) {
+        JwtTokenRequest accRequest = JwtTokenRequest.of(user, deviceType);
+        JwtTokenRequest refRequest = JwtTokenRequest.of(user, deviceType);
 
         String accToken = jwtUtil.generateAccToken(accRequest);
         String refToken = jwtUtil.generateRefToken(refRequest);
@@ -50,11 +47,15 @@ public class JwtService {
         return new Tokens(accToken, refToken);
     }
 
-    public Tokens reissueTokens(String refToken) {
+    public Tokens reissueTokens(String refToken, DeviceType deviceType) {
         Claims refClaims = parseToken(refToken);
         String jti       = refClaims.getId();
         UUID   userId    = UUID.fromString(refClaims.getSubject());
-        DeviceType type  = DeviceType.valueOf(refClaims.get(JwtConstants.CLAIM_DEVICE_TYPE, String.class));
+        DeviceType type  = DeviceType.from(refClaims.get(JwtConstants.CLAIM_DEVICE_TYPE, String.class));
+
+        if (type != deviceType) {
+            throw new BaseException(ErrorCode.ACCESS_DENIED);
+        }
 
         RefreshToken refreshToken = refreshTokenRepository.findByIdAndRevokedFalse(UUID.fromString(jti))
                 .orElseThrow(() -> {
@@ -64,7 +65,7 @@ public class JwtService {
                 });
 
         refreshTokenRepository.save(refreshToken.revoke());
-        return generateTokens(refreshToken.getUser());
+        return generateTokens(refreshToken.getUser(), type);
     }
 
     public void revokeAllRefreshTokenByUserAndDevice(String userId, DeviceType deviceType) {
