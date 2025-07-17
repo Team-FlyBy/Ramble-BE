@@ -37,6 +37,16 @@ public class CookieUtil {
                 .build();
     }
 
+    public ResponseCookie deleteResponseCookie() {
+        return ResponseCookie.from(JwtConstants.REFRESH_COOKIE, "")
+                .path("/")
+                .httpOnly(true)
+                .maxAge(0) // 쿠키 삭제를 위해 maxAge를 0으로 설정
+                .secure(true)
+                .sameSite("Lax")
+                .build();
+    }
+
     public Optional<String> getCookie(HttpServletRequest request) {
         Cookie cookie = WebUtils.getCookie(request, JwtConstants.REFRESH_COOKIE);
 
