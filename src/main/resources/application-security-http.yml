@@ -22,5 +22,6 @@ security:
       allowed-headers:
         - Authorization
         - Content-Type
+        - Ramble-Client-Platform
       allow-credentials: true
       max-age: 3600
