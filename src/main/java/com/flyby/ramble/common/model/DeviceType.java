@@ -6,5 +6,13 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 public enum DeviceType {
     ANDROID,
     IOS,
-    WEB
+    WEB;
+
+    public static DeviceType from(String deviceType) {
+        try {
+            return DeviceType.valueOf(deviceType.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid device type: " + deviceType);
+        }
+    }
 }
