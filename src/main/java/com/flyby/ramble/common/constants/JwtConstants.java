@@ -24,4 +24,8 @@ public final class JwtConstants {
     public static final String TOKEN_TYPE_ACCESS  = "ACCESS";
     public static final String TOKEN_TYPE_REFRESH = "REFRESH";
 
+    /*   JWT Device Type Header */
+
+    public static final String HEADER_DEVICE_TYPE = "Ramble-Client-Platform";
+
 }
