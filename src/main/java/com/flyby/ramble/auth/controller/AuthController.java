@@ -30,8 +30,9 @@ public class AuthController {
     private final CookieUtil  cookieUtil;
 
     @PostMapping("/reissue")
-    public ResponseEntity<Void> reissueToken(@CookieValue(JwtConstants.REFRESH_COOKIE) String cookie) {
-        Tokens tokens   = jwtService.reissueTokens(cookie);
+    public ResponseEntity<Void> reissueToken(@RequestHeader(JwtConstants.HEADER_DEVICE_TYPE) String deviceType,
+                                             @CookieValue(JwtConstants.REFRESH_COOKIE) String cookie) {
+        Tokens tokens   = jwtService.reissueTokens(cookie, DeviceType.from(deviceType));
         String accToken = JwtConstants.TOKEN_PREFIX + tokens.accToken();
         String refToken = cookieUtil.createResponseCookie(tokens.refToken()).toString();
 
@@ -43,13 +44,17 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String header,
+                                       @RequestHeader(JwtConstants.HEADER_DEVICE_TYPE) String deviceType,
                                        @AuthenticationPrincipal UserDetails user) {
-        String token = extractToken(header);
+        String token    = extractToken(header);
+        String refToken = cookieUtil.deleteResponseCookie().toString();
 
-        jwtService.revokeAllRefreshTokenByUserAndDevice(user.getUsername(), DeviceType.WEB);
+        jwtService.revokeAllRefreshTokenByUserAndDevice(user.getUsername(), DeviceType.from(deviceType));
         authService.putBlackList(token);
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, refToken)
+                .build();
     }
 
     // 회원 탈퇴
@@ -57,12 +62,15 @@ public class AuthController {
     public ResponseEntity<Void> withdraw(@RequestHeader(HttpHeaders.AUTHORIZATION) String header,
                                          @AuthenticationPrincipal UserDetails user) {
         String token = extractToken(header);
+        String refToken = cookieUtil.deleteResponseCookie().toString();
 
         jwtService.revokeAllRefreshTokenByUser(user.getUsername());
         authService.putBlackList(token);
         userService.withdraw(user.getUsername());
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, refToken)
+                .build();
     }
 
     private String extractToken(String authHeader) {
