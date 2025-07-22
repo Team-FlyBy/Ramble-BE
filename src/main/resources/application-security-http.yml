@@ -11,17 +11,8 @@ security:
       - /auth/reissue
       - /oauth/**
     cors:
-      allowed-origins: # TODO : 추후 FE로 변경
-        - "*"
-      allowed-methods:
-        - GET
-        - POST
-        - PUT
-        - DELETE
-        - OPTIONS
-      allowed-headers:
-        - Authorization
-        - Content-Type
-        - Ramble-Client-Platform
+      allowed-origins: ${ALLOWED_ORIGINS}
+      allowed-methods: ${ALLOWED_METHODS}
+      allowed-headers: ${ALLOWED_HEADERS}
       allow-credentials: true
       max-age: 3600
