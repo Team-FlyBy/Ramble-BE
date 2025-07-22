@@ -1,5 +1,6 @@
 security:
   http:
+    domain: ${DOMAIN}
     oauth2-paths:
       - /oauth2/authorize/**
       - /oauth2/callback/**
