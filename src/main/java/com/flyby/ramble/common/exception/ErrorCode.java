@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
     // 400 BAD_REQUEST
     INVALID_REQUEST_BODY (400, HttpStatus.BAD_REQUEST, "Invalid Request Body"),
+    MISSING_REQUIRED_HEADER(400, HttpStatus.BAD_REQUEST, "Missing Required Header"),
 
     // 401 UNAUTHORIZED
     MISSING_ACCESS_TOKEN (40001, HttpStatus.UNAUTHORIZED, "Missing Access Token"),
