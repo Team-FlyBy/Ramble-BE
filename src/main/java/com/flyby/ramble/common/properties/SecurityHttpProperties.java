@@ -1,5 +1,6 @@
 package com.flyby.ramble.common.properties;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Positive;
 import lombok.Getter;
@@ -15,6 +16,9 @@ import java.util.List;
 @Component
 @ConfigurationProperties(prefix = "security.http")
 public class SecurityHttpProperties {
+
+    @NotBlank
+    private String domain;
 
     @NotEmpty
     private List<String> oAuth2Paths = new ArrayList<>();
