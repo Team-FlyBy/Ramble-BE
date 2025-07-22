@@ -1,6 +1,8 @@
 package com.flyby.ramble.common.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.flyby.ramble.common.exception.BaseException;
+import com.flyby.ramble.common.exception.ErrorCode;
 
 @JsonFormat(shape = JsonFormat.Shape.STRING)
 public enum DeviceType {
@@ -12,7 +14,7 @@ public enum DeviceType {
         try {
             return DeviceType.valueOf(deviceType.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid device type: " + deviceType);
+            throw new BaseException(ErrorCode.INVALID_DEVICE_TYPE);
         }
     }
 }
