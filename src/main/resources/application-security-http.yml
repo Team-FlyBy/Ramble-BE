@@ -12,8 +12,8 @@ security:
       - /auth/reissue
       - /oauth/**
     cors:
-      allowed-origins: ${ALLOWED_ORIGINS}
-      allowed-methods: ${ALLOWED_METHODS}
-      allowed-headers: ${ALLOWED_HEADERS}
+      allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
+      allowed-methods: ${ALLOWED_METHODS:GET,POST,PUT,DELETE}
+      allowed-headers: ${ALLOWED_HEADERS:Content-Type,Authorization}
       allow-credentials: true
       max-age: 3600
