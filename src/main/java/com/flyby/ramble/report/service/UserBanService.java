@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class UserBanService {
@@ -17,17 +19,26 @@ public class UserBanService {
 
     @Transactional
     public void banUser(BanUserCommandDTO commandDTO) {
-        User bannedUser = userRepository.findByExternalId(commandDTO.getUserUuid()).orElseThrow();
+        User bannedUser = userRepository.findById(commandDTO.getUserId()).orElseThrow();
 
+        // TODO: DB 시간으로 변경
         UserBan userBan = UserBan.builder()
                 .bannedUser(bannedUser)
                 .reason(commandDTO.getBanReason())
                 .bannedAt(commandDTO.getBannedAt())
-                .banExpiresAt(commandDTO.getBanExpiresAt())
+                .banExpiresAt(LocalDateTime.now().plusDays(commandDTO.getBanPeriodDays()))
                 .build();
 
         userBanRepository.save(userBan);
     }
 
+    public boolean isUserCurrentlyBanned(Long userId) {
+        return userBanRepository.isUserCurrentlyBanned(userId);
+    }
 
+
+    public long countByBannedUser(Long bannedUserId) {
+        User bannedUser = userRepository.findById(bannedUserId).orElseThrow();
+        return userBanRepository.countByBannedUser(bannedUser);
+    }
 }

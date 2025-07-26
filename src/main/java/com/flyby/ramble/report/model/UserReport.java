@@ -4,10 +4,7 @@ import com.flyby.ramble.common.model.BaseEntity;
 import com.flyby.ramble.session.model.Session;
 import com.flyby.ramble.user.model.User;
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.UUID;
 
@@ -56,6 +53,7 @@ public class UserReport extends BaseEntity {
     @Column(length = 1000)
     private String detail;
 
+    @Setter
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private UserReportStatus status;
@@ -71,5 +69,6 @@ public class UserReport extends BaseEntity {
         this.detail = detail;
         this.status = status;
     }
+
 }
 

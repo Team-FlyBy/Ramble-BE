@@ -7,52 +7,86 @@ import com.flyby.ramble.report.dto.DetectNudeCommandDTO;
 import com.flyby.ramble.report.dto.ReportUserRequestDTO;
 import com.flyby.ramble.report.model.BanReason;
 import com.flyby.ramble.report.model.ReportReason;
+import com.flyby.ramble.report.model.UserReportStatus;
+import com.flyby.ramble.session.model.Session;
+import com.flyby.ramble.session.repository.SessionRepository;
+import com.flyby.ramble.session.service.SessionService;
 import com.flyby.ramble.user.model.User;
 import com.flyby.ramble.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import static com.flyby.ramble.report.constants.Constants.MAX_REPORT_COUNT;
+import static com.flyby.ramble.report.constants.Constants.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ReportService {
     private final UserRepository userRepository;
     private final UserReportService userReportService;
+    private final SessionService sessionService;
     private final NudeDetectionService nudeDetectionService;
-    private final UserBanService userBanService;
 
     public void reportByUser(ReportUserRequestDTO requestDTO, MultipartFile peerVideoSnapshot) {
+        Long sessionId = sessionService.getSessionIdBySessionUuid(requestDTO.getSessionUuid());
+        User reportedUser = userRepository.findByExternalId(requestDTO.getReportedUserUuid()).orElseThrow();
+        User reportingUser = userRepository.findByExternalId(requestDTO.getReportingUserUuid()).orElseThrow();
+
+        UserReportStatus userReportStatus = UserReportStatus.PENDING;
+        boolean isUserCurrentlyBanned = userReportService.isUserCurrentlyBanned(reportedUser.getId());
+
+        if (isUserCurrentlyBanned) {
+            // 유저가 이미 밴 당한 상태인 경우 신고 처리됨으로 설정
+            userReportStatus = UserReportStatus.RESOLVED;
+        }
+
         CreateUserReportCommandDTO commandDTO = CreateUserReportCommandDTO.builder()
-                .sessionUuid(requestDTO.getSessionUuid())
-                .reportedUserUuid(requestDTO.getReportedUserUuid())
-                .reportingUserUuid(requestDTO.getReportingUserUuid())
+                .sessionId(sessionId)
+                .reportedUserId(reportedUser.getId())
+                .reportingUserId(reportingUser.getId())
                 .reportReason(requestDTO.getReportReason())
                 .reasonDetail(requestDTO.getReasonDetail())
+                .userReportStatus(userReportStatus)
                 .build();
 
-        UUID reportUuid = userReportService.saveUserReport(commandDTO);
+        Long reportId = userReportService.saveUserReport(commandDTO);
 
-        User reportedUser = userRepository.findByExternalId(requestDTO.getReportedUserUuid()).orElseThrow();
-        long reportCount = userReportService.countByReportedUser(reportedUser);
+        if (isUserCurrentlyBanned) {
+            // 유저가 이미 밴당한 상태인 경우 그냥 종료
+            log.info("This user is already banned - Banned user ID: {}", reportedUser.getId());
+            return;
+        }
 
-        // 신고 수 초과 시 바로 정지
-        if (reportCount >= MAX_REPORT_COUNT) {
-            userBanService.banUser(
+        long reportCount = userReportService.countByUserIdAndStatusIsPending(reportedUser.getId());
+
+        if (reportCount > MAX_REPORT_COUNT) {   // 신고 수 초과 시 바로 정지
+            long banCount = userReportService.findUserBanCount(reportedUser.getId());
+            long banPeriodDays = FIRST_BAN_PERIOD_DAYS;
+
+            if (banCount == 1L) {
+                banPeriodDays = SECOND_BAN_PERIOD_DAYS;
+            } else if (banCount >= 2L) {
+                banPeriodDays = THIRD_BAN_PERIOD_DAYS;
+            }
+
+            userReportService.banUser(
                     BanUserCommandDTO.builder()
-                            .userUuid(reportedUser.getExternalId())
+                            .userId(reportedUser.getId())
                             .bannedAt(LocalDateTime.now())
-                            .banExpiresAt(LocalDateTime.now().plusDays(3L))
+                            .banPeriodDays(banPeriodDays)
                             .banReason(BanReason.REPORT_ACCUMULATION)
                             .build()
             );
         }
 
-        if (requestDTO.getReportReason() == ReportReason.SEXUAL_CONTENT) {
+        if (requestDTO.getReportReason() == ReportReason.SEXUAL_CONTENT) {      // 음란물, 노출 신고
+            UUID reportUuid = userReportService.getReportUuidByReportId(reportId);
+
             nudeDetectionService.requestDetection(
                     DetectNudeCommandDTO.builder()
                             .reportUuid(reportUuid)
