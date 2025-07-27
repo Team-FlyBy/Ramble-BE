@@ -2,6 +2,7 @@ package com.flyby.ramble.report.service;
 
 import com.flyby.ramble.common.producer.MessageProducer;
 import com.flyby.ramble.common.service.StorageService;
+import com.flyby.ramble.report.config.UserSnapshotEncrytionProperties;
 import com.flyby.ramble.report.dto.DetectNudeCommandDTO;
 import com.flyby.ramble.report.dto.EncryptedSnapshotUploadResultDTO;
 import com.flyby.ramble.report.dto.NudeDetectionRequestDTO;
@@ -18,11 +19,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
+import java.security.*;
+import java.security.spec.X509EncodedKeySpec;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.UUID;
 import java.util.zip.GZIPOutputStream;
 
@@ -33,6 +34,7 @@ import static com.flyby.ramble.report.constants.Constants.STORAGE_REPORT_DIR;
 @RequiredArgsConstructor
 @Slf4j
 public class NudeDetectionServiceImpl implements NudeDetectionService {
+    private final UserSnapshotEncrytionProperties userSnapshotEncrytionProperties;
     private final MessageProducer messageProducer;
     private final StorageService storageService;
 
@@ -90,9 +92,9 @@ public class NudeDetectionServiceImpl implements NudeDetectionService {
                 storageService.uploadFile(fileUrl, fileInput, contentLength, "application/octet-stream");
             }
 
-            KeyPair rsaKeyPair = getRSAKeyPair();
+            PublicKey publicKey = getPublicKeyFromBase64(userSnapshotEncrytionProperties.getPublicKey());
             Cipher rsaCipher = Cipher.getInstance("RSA");
-            rsaCipher.init(Cipher.ENCRYPT_MODE, rsaKeyPair.getPublic());
+            rsaCipher.init(Cipher.ENCRYPT_MODE, publicKey);
             byte[] encryptedAesKey = rsaCipher.doFinal(aesKey.getEncoded());
 
             storageService.uploadFile(keyUrl, encryptedAesKey, "application/octet-stream");
@@ -111,9 +113,11 @@ public class NudeDetectionServiceImpl implements NudeDetectionService {
         }
     }
 
-    private KeyPair getRSAKeyPair() throws NoSuchAlgorithmException {
-        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-        keyGen.initialize(2048);
-        return keyGen.generateKeyPair();
+    // Base64 공개키 문자열을 PublicKey 객체로 변환
+    private PublicKey getPublicKeyFromBase64(String base64PublicKey) throws Exception {
+        byte[] decoded = Base64.getDecoder().decode(base64PublicKey);
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(decoded);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        return kf.generatePublic(spec);
     }
 }

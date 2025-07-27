@@ -32,6 +32,10 @@ storage:
     access-key: ${STORAGE_ACCESS_KEY}
     secret-key: ${STORAGE_SECRET_KEY}
 
+encryption:
+  user-snapshot:
+    public-key: ${USER_SNAPSHOT_ENCRYPTION_PUBLIC_KEY}
+
 logging:
   level:
     root: INFO
