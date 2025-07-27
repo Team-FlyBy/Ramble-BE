@@ -21,6 +21,7 @@ public class UserBanRepositoryImpl implements UserBanRepositoryCustom {
 
         Integer result = jpaQueryFactory
                 .selectOne()
+                .from(userBan)
                 .where(
                         userBan.bannedUser.id.eq(userId),
                         isCurrentlyBanned
