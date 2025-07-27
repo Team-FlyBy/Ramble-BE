@@ -1,6 +1,5 @@
 package com.flyby.ramble.report.service;
 
-import com.flyby.ramble.common.service.StorageService;
 import com.flyby.ramble.report.dto.BanUserCommandDTO;
 import com.flyby.ramble.report.dto.CreateUserReportCommandDTO;
 import com.flyby.ramble.report.dto.DetectNudeCommandDTO;
@@ -8,8 +7,6 @@ import com.flyby.ramble.report.dto.ReportUserRequestDTO;
 import com.flyby.ramble.report.model.BanReason;
 import com.flyby.ramble.report.model.ReportReason;
 import com.flyby.ramble.report.model.UserReportStatus;
-import com.flyby.ramble.session.model.Session;
-import com.flyby.ramble.session.repository.SessionRepository;
 import com.flyby.ramble.session.service.SessionService;
 import com.flyby.ramble.user.model.User;
 import com.flyby.ramble.user.repository.UserRepository;
@@ -54,7 +51,7 @@ public class ReportService {
                 .userReportStatus(userReportStatus)
                 .build();
 
-        Long reportId = userReportService.saveUserReport(commandDTO);
+        Long reportId = userReportService.saveUserReport(commandDTO);   // 유저 신고 저장
 
         if (isUserCurrentlyBanned) {
             // 유저가 이미 밴당한 상태인 경우 그냥 종료

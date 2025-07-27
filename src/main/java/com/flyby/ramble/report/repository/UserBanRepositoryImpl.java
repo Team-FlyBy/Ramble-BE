@@ -5,9 +5,11 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 
+@Repository
 @RequiredArgsConstructor
 public class UserBanRepositoryImpl implements UserBanRepositoryCustom {
     private final JPAQueryFactory jpaQueryFactory;
