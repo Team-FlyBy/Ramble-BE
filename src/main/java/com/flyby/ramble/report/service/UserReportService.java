@@ -60,10 +60,6 @@ public class UserReportService {
         ////
     }
 
-    public long findUserBanCount(Long userId) {
-        return userBanService.countByBannedUser(userId);
-    }
-
     public boolean isUserCurrentlyBanned(Long userId) {
         return userBanService.isUserCurrentlyBanned(userId);
     }

@@ -13,5 +13,4 @@ public class BanUserCommandDTO {
     private Long userId;
     private BanReason banReason;
     private LocalDateTime bannedAt;
-    private long banPeriodDays;
 }

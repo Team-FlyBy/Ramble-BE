@@ -62,20 +62,10 @@ public class ReportService {
         long reportCount = userReportService.countByUserIdAndStatusIsPending(reportedUser.getId());
 
         if (reportCount > MAX_REPORT_COUNT) {   // 신고 수 초과 시 바로 정지
-            long banCount = userReportService.findUserBanCount(reportedUser.getId());
-            long banPeriodDays = FIRST_BAN_PERIOD_DAYS;
-
-            if (banCount == 1L) {
-                banPeriodDays = SECOND_BAN_PERIOD_DAYS;
-            } else if (banCount >= 2L) {
-                banPeriodDays = THIRD_BAN_PERIOD_DAYS;
-            }
-
             userReportService.banUser(
                     BanUserCommandDTO.builder()
                             .userId(reportedUser.getId())
                             .bannedAt(LocalDateTime.now())
-                            .banPeriodDays(banPeriodDays)
                             .banReason(BanReason.REPORT_ACCUMULATION)
                             .build()
             );
