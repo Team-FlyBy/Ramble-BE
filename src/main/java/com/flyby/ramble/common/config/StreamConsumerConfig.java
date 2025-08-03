@@ -36,6 +36,14 @@ public class StreamConsumerConfig {
 
     @Bean
     public List<Subscription> streamSubscriptions(StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
+        try {
+            container.start();
+            log.info("Redis Stream listener container started successfully");
+        } catch (Exception e) {
+                log.error("Failed to start Redis Stream listener container", e);
+                throw new IllegalStateException("Cannot start Redis Stream listener", e);
+        }
+
         container.start();
 
         List<Subscription> subscriptions = new ArrayList<>();

@@ -17,6 +17,15 @@ public class RedisStreamProducer implements MessageProducer {
 
     @Override
     public void send(String topic, Object message) {
+
+        if (topic == null || topic.isEmpty()) {
+            throw new IllegalArgumentException("Topic cannot be null or empty");
+        }
+
+        if (message == null) {
+            throw new IllegalArgumentException("Message cannot be null");
+        }
+
         String json;
 
         try {
