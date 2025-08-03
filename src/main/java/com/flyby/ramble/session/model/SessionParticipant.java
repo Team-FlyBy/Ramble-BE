@@ -43,4 +43,3 @@ public class SessionParticipant extends BaseEntity {
         this.user = user;
     }
 }
-}
