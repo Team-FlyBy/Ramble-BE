@@ -9,7 +9,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class NudeDetectionRequestDTO {
-    private UUID reportId;
+    private UUID reportUuId;
     private String fileUrl;
     private String keyUrl;
 }

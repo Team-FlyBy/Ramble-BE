@@ -44,7 +44,7 @@ public class NudeDetectionServiceImpl implements NudeDetectionService {
         messageProducer.send(
                 MESSAGE_TOPIC_NUDE_DETECTION_REQUEST,
                 NudeDetectionRequestDTO.builder()
-                        .reportId(commandDTO.getReportUuid())
+                        .reportUuId(commandDTO.getReportUuid())
                         .fileUrl(resultDTO.getFileUrl())
                         .keyUrl(resultDTO.getKeyUrl())
                         .build()
