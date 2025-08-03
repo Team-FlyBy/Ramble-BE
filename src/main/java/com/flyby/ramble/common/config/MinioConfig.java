@@ -16,8 +16,6 @@ public class MinioConfig {
 
     @Bean
     public MinioClient minioClient() {
-        log.info("{} {}", storageProperties.getCredentials().getAccessKey(), storageProperties.getCredentials().getSecretKey());
-
         return MinioClient.builder()
                 .endpoint(storageProperties.getEndpoint())
                 .credentials(storageProperties.getCredentials().getAccessKey(), storageProperties.getCredentials().getSecretKey())
