@@ -20,7 +20,7 @@ import java.util.UUID;
 @Table(
         name = "user_bans",
         indexes = {
-                @Index(name = "idx_banned_user_released_at", columnList = "banned_user, released_at")
+                @Index(name = "idx_banned_user_ban_expires_at", columnList = "banned_user, ban_expires_at")
         }
 )
 public class UserBan extends BaseEntity {
