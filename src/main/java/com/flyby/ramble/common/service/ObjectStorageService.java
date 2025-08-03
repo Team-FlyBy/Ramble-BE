@@ -66,12 +66,12 @@ public class ObjectStorageService implements StorageService {
 
     @Override
     public void uploadFile(String newFilePath, InputStream inputStream, long contentLength, String contentType) {
-        try (InputStream is = inputStream) {
+        try {
             minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(minioConfig.getBucket())
                             .object(newFilePath)
-                            .stream(is, contentLength, -1)
+                            .stream(inputStream, contentLength, -1)
                             .contentType(contentType)
                             .build()
             );
