@@ -2,7 +2,7 @@ package com.flyby.ramble.report.service;
 
 import com.flyby.ramble.common.producer.MessageProducer;
 import com.flyby.ramble.common.service.StorageService;
-import com.flyby.ramble.report.config.UserSnapshotEncrytionProperties;
+import com.flyby.ramble.report.config.UserSnapshotEncryptionProperties;
 import com.flyby.ramble.report.dto.DetectNudeCommandDTO;
 import com.flyby.ramble.report.dto.EncryptedSnapshotUploadResultDTO;
 import com.flyby.ramble.report.dto.NudeDetectionRequestDTO;
@@ -34,7 +34,7 @@ import static com.flyby.ramble.report.constants.Constants.STORAGE_REPORT_DIR;
 @RequiredArgsConstructor
 @Slf4j
 public class NudeDetectionServiceImpl implements NudeDetectionService {
-    private final UserSnapshotEncrytionProperties userSnapshotEncrytionProperties;
+    private final UserSnapshotEncryptionProperties userSnapshotEncryptionProperties;
     private final MessageProducer messageProducer;
     private final StorageService storageService;
 
@@ -92,7 +92,7 @@ public class NudeDetectionServiceImpl implements NudeDetectionService {
                 storageService.uploadFile(fileUrl, fileInput, contentLength, "application/octet-stream");
             }
 
-            PublicKey publicKey = getPublicKeyFromBase64(userSnapshotEncrytionProperties.getPublicKey());
+            PublicKey publicKey = getPublicKeyFromBase64(userSnapshotEncryptionProperties.getPublicKey());
             Cipher rsaCipher = Cipher.getInstance("RSA");
             rsaCipher.init(Cipher.ENCRYPT_MODE, publicKey);
             byte[] encryptedAesKey = rsaCipher.doFinal(aesKey.getEncoded());

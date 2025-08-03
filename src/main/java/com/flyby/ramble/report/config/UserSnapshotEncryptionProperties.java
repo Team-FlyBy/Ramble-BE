@@ -7,6 +7,6 @@ import org.springframework.context.annotation.Configuration;
 @Getter
 @Configuration
 @ConfigurationProperties(prefix = "encryption.user-snapshot")
-public class UserSnapshotEncrytionProperties {
+public class UserSnapshotEncryptionProperties {
     private String publicKey;
 }
