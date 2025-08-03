@@ -71,7 +71,8 @@ public class UserReportService {
     }
 
     public long countByUserIdAndStatusIsPending(Long userId) {
-        User reportedUser = userRepository.findById(userId).orElseThrow();
+        User reportedUser = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
         return userReportRepository.countByReportedUserAndStatusIs(reportedUser, UserReportStatus.PENDING);
     }
 }
