@@ -46,7 +46,8 @@ public class UserReportService {
 
     @Transactional
     public void banUser(BanUserCommandDTO commandDTO) {
-        User bannedUser = userRepository.findById(commandDTO.getUserId()).orElseThrow();
+        User bannedUser = userRepository.findById(commandDTO.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + commandDTO.getUserId()));
         userBanService.banUser(commandDTO);
 
         //// 쿼리 최적화, QueryDSL로 대체 예정

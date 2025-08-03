@@ -25,7 +25,8 @@ public class UserBanService {
 
     @Transactional
     public void banUser(BanUserCommandDTO commandDTO) {
-        User bannedUser = userRepository.findById(commandDTO.getUserId()).orElseThrow();
+        User bannedUser = userRepository.findById(commandDTO.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + commandDTO.getUserId()));
 
         long banCount = countByBannedUser(bannedUser.getId());
         long banPeriodDays = FIRST_BAN_PERIOD_DAYS;
@@ -48,7 +49,7 @@ public class UserBanService {
 
     @Transactional
     public void banUserByNudeDetection(UUID userUuid) {
-        User user = userRepository.findByExternalId(userUuid).orElseThrow();
+        User user = userRepository.findByExternalId(userUuid).orElseThrow(() -> new IllegalArgumentException("User not found with uuid: " + userUuid));
 
         if (isUserCurrentlyBanned(user.getId())) {
             log.info("User(ID: {}) is already banned.", user.getId());
