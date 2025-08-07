@@ -108,7 +108,9 @@ public class NudeDetectionServiceImpl implements NudeDetectionService {
             throw new RuntimeException(e);
         } finally {
             if (tempFile != null && tempFile.exists()) {
-                tempFile.delete();
+                if (!tempFile.delete()) {
+                    log.warn("Failed to delete temporary file: {}", tempFile.getAbsolutePath());
+                }
             }
         }
     }
