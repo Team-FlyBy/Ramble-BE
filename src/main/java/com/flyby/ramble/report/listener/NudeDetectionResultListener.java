@@ -2,7 +2,7 @@ package com.flyby.ramble.report.listener;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flyby.ramble.report.dto.NudeDetectionResultDTO;
-import com.flyby.ramble.report.service.UserBanService;
+import com.flyby.ramble.report.service.UserReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.stream.MapRecord;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class NudeDetectionResultListener {
     private final ObjectMapper objectMapper;
-    private final UserBanService userBanService;
+    private final UserReportService userReportService;
 
     public void handleMessage(MapRecord<String, String, String> message) {
         try {
@@ -25,7 +25,7 @@ public class NudeDetectionResultListener {
                 return;
             }
 
-            userBanService.banUserByNudeDetection(result.getReportUuid());
+            userReportService.banUserByNudeDetection(result.getReportUuid());
 
         } catch (Exception e) {
             log.error("Failed to process nude detection message", e);

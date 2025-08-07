@@ -7,9 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface UserReportRepository extends JpaRepository<UserReport, Long> {
     List<UserReport> findAllByReportedUserAndStatusIs(User reportedUser, UserReportStatus status);
     Optional<UserReport> findById(Long id);
+    Optional<UserReport> findByUuid(UUID uuid);
     long countByReportedUserAndStatusIs(User reportedUser, UserReportStatus status);
 }

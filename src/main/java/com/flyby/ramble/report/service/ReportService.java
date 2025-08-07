@@ -69,6 +69,9 @@ public class ReportService {
                             .banReason(BanReason.REPORT_ACCUMULATION)
                             .build()
             );
+
+            log.info("User has been banned due to exceeding the allowed number of reports - Banned user ID: {}", reportedUser.getId());
+            return;
         }
 
         if (requestDTO.getReportReason() == ReportReason.SEXUAL_CONTENT) {      // 음란물, 노출 신고

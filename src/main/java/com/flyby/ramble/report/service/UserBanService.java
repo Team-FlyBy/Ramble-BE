@@ -47,24 +47,6 @@ public class UserBanService {
         userBanRepository.save(userBan);
     }
 
-    @Transactional
-    public void banUserByNudeDetection(UUID userUuid) {
-        User user = userRepository.findByExternalId(userUuid).orElseThrow(() -> new IllegalArgumentException("User not found with uuid: " + userUuid));
-
-        if (isUserCurrentlyBanned(user.getId())) {
-            log.info("User(ID: {}) is already banned.", user.getId());
-            return;
-        }
-
-        banUser(
-                BanUserCommandDTO.builder()
-                        .userId(user.getId())
-                        .banReason(BanReason.NUDE_DETECTION)
-                        .bannedAt(LocalDateTime.now())
-                        .build()
-        );
-    }
-
     public boolean isUserCurrentlyBanned(Long userId) {
         return userBanRepository.isUserCurrentlyBanned(userId);
     }

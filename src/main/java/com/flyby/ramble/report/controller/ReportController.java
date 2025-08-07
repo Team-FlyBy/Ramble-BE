@@ -1,5 +1,6 @@
 package com.flyby.ramble.report.controller;
 
+import com.flyby.ramble.report.dto.AutoNudeDetectionRequestDTO;
 import com.flyby.ramble.report.dto.ReportUserRequestDTO;
 import com.flyby.ramble.report.service.ReportService;
 import lombok.RequiredArgsConstructor;
@@ -25,4 +26,11 @@ public class ReportController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+    @PostMapping("/auto-nude-detection")
+    public ResponseEntity<Void> reportNudeByAuto(@RequestPart("request") AutoNudeDetectionRequestDTO requestDTO,
+                                                         @RequestPart(value = "peerVideoSnapshot", required = false) MultipartFile peerVideoSnapshot) {
+        log.debug("Auto report request received: {}", requestDTO);
+
+        return ResponseEntity.ok().build();
+    }
 }
