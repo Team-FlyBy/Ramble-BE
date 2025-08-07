@@ -1,6 +1,10 @@
 spring:
   main:
     lazy-initialization: true # 지연 초기화 활성화 (필요 없으면 제거)
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -15,6 +19,22 @@ spring:
       hibernate:
         format_sql: true
     database-platform: org.hibernate.dialect.MySQL8Dialect
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: 6379
+
+storage:
+  endpoint: ${STORAGE_ENDPOINT}
+  bucket: ${STORAGE_BUCKET}
+  credentials:
+    access-key: ${STORAGE_ACCESS_KEY}
+    secret-key: ${STORAGE_SECRET_KEY}
+
+encryption:
+  user-snapshot:
+    public-key: ${USER_SNAPSHOT_ENCRYPTION_PUBLIC_KEY}
 
 logging:
   level:
