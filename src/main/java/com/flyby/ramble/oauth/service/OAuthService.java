@@ -2,6 +2,7 @@ package com.flyby.ramble.oauth.service;
 
 import com.flyby.ramble.auth.dto.Tokens;
 import com.flyby.ramble.auth.service.JwtService;
+import com.flyby.ramble.common.model.DeviceType;
 import com.flyby.ramble.oauth.dto.OAuthIdTokenDTO;
 import com.flyby.ramble.oauth.dto.OAuthRegisterDTO;
 import com.flyby.ramble.oauth.dto.OAuthPkceDTO;
@@ -31,22 +32,22 @@ public class OAuthService {
 
     private final ClientRegistrationRepository clientRegistrationRepo;
 
-    public Tokens getTokensFromGoogleUser(OAuthPkceDTO request) {
+    public Tokens getTokensFromGoogleUser(OAuthPkceDTO request, DeviceType deviceType) {
         String idToken = getGoogleIdToken(request.code(), request.codeVerifier(), request.redirectUri());
 
         OAuthRegisterDTO registerDTO = oidcTokenParser.parseGoogleIdToken(idToken);
         User user = userService.registerOrLogin(registerDTO);
 
-        return jwtService.generateTokens(user);
+        return jwtService.generateTokens(user, deviceType);
     }
 
-    public Tokens getTokensFromGoogleIdToken(OAuthIdTokenDTO request) {
+    public Tokens getTokensFromGoogleIdToken(OAuthIdTokenDTO request, DeviceType deviceType) {
         String idToken = request.token();
 
         OAuthRegisterDTO registerDTO = oidcTokenParser.parseGoogleIdToken(idToken);
         User user = userService.registerOrLogin(registerDTO);
 
-        return jwtService.generateTokens(user);
+        return jwtService.generateTokens(user, deviceType);
     }
 
     private String getGoogleIdToken(String code, String codeVerifier, String redirectUri) {
