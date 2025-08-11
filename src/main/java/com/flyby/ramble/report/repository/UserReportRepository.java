@@ -12,6 +12,6 @@ import java.util.UUID;
 public interface UserReportRepository extends JpaRepository<UserReport, Long> {
     List<UserReport> findAllByReportedUserAndStatusIs(User reportedUser, UserReportStatus status);
     Optional<UserReport> findById(Long id);
-    Optional<UserReport> findByUuid(UUID uuid);
+    Optional<UserReport> findByExternalId(UUID externalId);
     long countByReportedUserAndStatusIs(User reportedUser, UserReportStatus status);
 }

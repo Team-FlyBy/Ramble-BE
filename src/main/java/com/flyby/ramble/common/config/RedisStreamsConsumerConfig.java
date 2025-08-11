@@ -1,6 +1,6 @@
 package com.flyby.ramble.common.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.flyby.ramble.report.listener.AutoNudeDetectionResultListener;
 import com.flyby.ramble.report.listener.NudeDetectionResultListener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,9 +21,8 @@ import java.util.List;
 @Configuration
 @RequiredArgsConstructor
 @Slf4j
-public class StreamConsumerConfig {
+public class RedisStreamsConsumerConfig {
     private final RedisConnectionFactory connectionFactory;
-    private final NudeDetectionResultListener nudeDetectionResultListener;
 
     @Bean
     public StreamMessageListenerContainer<String, MapRecord<String, String, String>> streamMessageListenerContainer() {
@@ -35,7 +34,7 @@ public class StreamConsumerConfig {
     }
 
     @Bean
-    public List<Subscription> streamSubscriptions(StreamMessageListenerContainer<String, MapRecord<String, String, String>> container) {
+    public List<Subscription> streamSubscriptions(StreamMessageListenerContainer<String, MapRecord<String, String, String>> container, AutoNudeDetectionResultListener autoNudeDetectionResultListener, NudeDetectionResultListener nudeDetectionResultListener) {
         try {
             container.start();
             log.info("Redis Stream listener container started successfully");
@@ -49,11 +48,20 @@ public class StreamConsumerConfig {
         List<Subscription> subscriptions = new ArrayList<>();
 
         Subscription nudeDetectionSub = container.receive(
-                Consumer.from("nude-detection-group", "consumer-1"),
+                Consumer.from("nude-detection-group", "consumer-nude-detection"),
                 StreamOffset.create("nude-detection-result", ReadOffset.lastConsumed()),
                 nudeDetectionResultListener::handleMessage
         );
+
         subscriptions.add(nudeDetectionSub);
+
+        Subscription autoNudeDetectionSub = container.receive(
+                Consumer.from("auto-nude-detection-group", "consumer-auto-nude-detection"),
+                StreamOffset.create("auto-nude-detection-result", ReadOffset.lastConsumed()),
+                autoNudeDetectionResultListener::handleMessage
+        );
+
+        subscriptions.add(autoNudeDetectionSub);
 
         return subscriptions;
     }

@@ -6,7 +6,10 @@ import java.util.UUID;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class NudeDetectionResultDTO {
+@AllArgsConstructor
+@Builder
+public class NudeDetectionRequestedEventDTO {
     private UUID reportUuid;
-    private Boolean isNude;
+    private String fileUrl;
+    private String keyUrl;
 }

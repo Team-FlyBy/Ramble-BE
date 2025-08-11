@@ -3,9 +3,7 @@ package com.flyby.ramble.report.service;
 import com.flyby.ramble.common.producer.MessageProducer;
 import com.flyby.ramble.common.service.StorageService;
 import com.flyby.ramble.report.config.UserSnapshotEncryptionProperties;
-import com.flyby.ramble.report.dto.DetectNudeCommandDTO;
-import com.flyby.ramble.report.dto.EncryptedSnapshotUploadResultDTO;
-import com.flyby.ramble.report.dto.NudeDetectionRequestDTO;
+import com.flyby.ramble.report.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,8 +25,7 @@ import java.util.Base64;
 import java.util.UUID;
 import java.util.zip.GZIPOutputStream;
 
-import static com.flyby.ramble.report.constants.Constants.MESSAGE_TOPIC_NUDE_DETECTION_REQUEST;
-import static com.flyby.ramble.report.constants.Constants.STORAGE_REPORT_DIR;
+import static com.flyby.ramble.report.constants.Constants.*;
 
 @Service
 @RequiredArgsConstructor
@@ -38,13 +35,28 @@ public class NudeDetectionServiceImpl implements NudeDetectionService {
     private final MessageProducer messageProducer;
     private final StorageService storageService;
 
+    @Override
     public void requestDetection(DetectNudeCommandDTO commandDTO) {
         EncryptedSnapshotUploadResultDTO resultDTO = gzipEncryptAndUploadSnapshot(commandDTO.getPeerVideoSnapshot());
 
         messageProducer.send(
                 MESSAGE_TOPIC_NUDE_DETECTION_REQUEST,
-                NudeDetectionRequestDTO.builder()
-                        .reportUuId(commandDTO.getReportUuid())
+                NudeDetectionRequestedEventDTO.builder()
+                        .reportUuid(commandDTO.getReportUuid())
+                        .fileUrl(resultDTO.getFileUrl())
+                        .keyUrl(resultDTO.getKeyUrl())
+                        .build()
+        );
+    }
+
+    @Override
+    public void requestAutoDetection(AutoNudeDetectionCommandDTO commandDTO) {
+        EncryptedSnapshotUploadResultDTO resultDTO = gzipEncryptAndUploadSnapshot(commandDTO.getPeerVideoSnapshot());
+
+        messageProducer.send(
+                MESSAGE_TOPIC_AUTO_NUDE_DETECTION_REQUEST,
+                AutoNudeDetectionRequestedEventDTO.builder()
+                        .userUuid(commandDTO.getUserUuid())
                         .fileUrl(resultDTO.getFileUrl())
                         .keyUrl(resultDTO.getKeyUrl())
                         .build()
