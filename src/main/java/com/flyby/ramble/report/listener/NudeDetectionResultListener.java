@@ -18,6 +18,12 @@ public class NudeDetectionResultListener {
     public void handleMessage(MapRecord<String, String, String> message) {
         try {
             String payload = message.getValue().get("payload");
+
+            if (payload == null) {
+                log.error("Received message with null payload");
+                return;
+            }
+
             NudeDetectionCompletedEventDTO result = objectMapper.readValue(payload, NudeDetectionCompletedEventDTO.class);
             log.info("Received nude detection result: {}", result);
 
