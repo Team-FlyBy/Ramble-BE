@@ -1,5 +1,6 @@
 package com.flyby.ramble.report.dto;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.util.UUID;
@@ -10,5 +11,6 @@ import java.util.UUID;
 @Builder
 @ToString
 public class AutoNudeDetectionRequestDTO {
+    @NotNull
     private UUID userUuid;
 }

@@ -3,9 +3,11 @@ package com.flyby.ramble.report.controller;
 import com.flyby.ramble.report.dto.AutoNudeDetectionCommandDTO;
 import com.flyby.ramble.report.dto.AutoNudeDetectionRequestDTO;
 import com.flyby.ramble.report.service.NudeDetectionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -18,11 +20,9 @@ import org.springframework.web.multipart.MultipartFile;
 public class NudeDetectionController {
     private final NudeDetectionService nudeDetectionService;
 
-    @PostMapping("/auto-nude-detection")
-    public ResponseEntity<Void> submitAutoNudeDetection(@RequestPart("request") AutoNudeDetectionRequestDTO requestDTO,
+    @PostMapping(value = "/auto-nude-detection", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> submitAutoNudeDetection(@Valid @RequestPart("request") AutoNudeDetectionRequestDTO requestDTO,
                                                  @RequestPart(value = "peerVideoSnapshot", required = true) MultipartFile peerVideoSnapshot) {
-        log.debug("Auto report request received: {}", requestDTO);
-
         nudeDetectionService.requestAutoDetection(
                 AutoNudeDetectionCommandDTO.builder()
                     .userUuid(requestDTO.getUserUuid())
