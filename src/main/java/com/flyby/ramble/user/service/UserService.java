@@ -30,6 +30,8 @@ public class UserService {
                             .username(oAuthRegisterDTO.username())
                             .provider(oAuthRegisterDTO.provider())
                             .providerId(oAuthRegisterDTO.providerId())
+                            .gender(oAuthRegisterDTO.gender())
+                            .birthDate(oAuthRegisterDTO.birthDate())
                             .build()));
         } catch (DataIntegrityViolationException e) {
             return userRepository.findByProviderAndProviderId(oAuthRegisterDTO.provider(), oAuthRegisterDTO.providerId())
