@@ -38,8 +38,9 @@ public class OAuthService {
     // TODO: 추후 리팩토링
     // 1. 회원가입의 경우, 추가 정보(생년월일, 성별 등) 동의하면 GooglePersonInfo 요청 (현재 로그인, 회원가입 구분 X)
     // 2-1. 로그인의 경우, 유저에게 추가 정보(생년월일, 성별 등)가 있으면 GooglePersonInfo 요청 안 함.
-    // 2-2. 로그인의 경우, 유저에게 추가 정보(생년월일, 성별 등)가 없으면 GooglePersonInfo 요청.
-    // (이유) Google의 경우 처음에 동의 안 해도 재로그인 시 동의 창이 뜸.
+    // 2-2. 로그인의 경우, 유저에게 추가 정보(생년월일, 성별 등)가 없으면 동의 여부 재판단 GooglePersonInfo 요청.
+    // (이유) Google의 경우 처음에 동의 안 해도 재로그인 시 동의 창이 뜸. (회원가입 시 동의 안 했어도 로그인 시 동의할 수 있음)
+    // * 동의 여부는 access token의 scope로 판단 가능
 
     public Tokens getTokensFromGoogleUser(OAuthPkceDTO request, DeviceType deviceType) {
         OAuth2AccessTokenResponse tokenResponse = getGoogleTokenResponse(request.code(), request.codeVerifier(), request.redirectUri(), deviceType);
