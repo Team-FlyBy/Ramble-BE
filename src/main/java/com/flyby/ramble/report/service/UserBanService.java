@@ -1,5 +1,6 @@
 package com.flyby.ramble.report.service;
 
+import com.flyby.ramble.report.dto.BanUserByUserUuidCommandDTO;
 import com.flyby.ramble.report.dto.BanUserCommandDTO;
 import com.flyby.ramble.report.model.BanReason;
 import com.flyby.ramble.report.model.UserBan;
@@ -45,6 +46,19 @@ public class UserBanService {
                 .build();
 
         userBanRepository.save(userBan);
+    }
+
+    @Transactional
+    public void banUser(BanUserByUserUuidCommandDTO commandDTO) {
+        User bannedUser = userRepository.findByExternalId(commandDTO.getUserUuid())
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + commandDTO.getUserUuid()));
+
+        banUser(BanUserCommandDTO.builder()
+                .userId(bannedUser.getId())
+                .bannedAt(commandDTO.getBannedAt())
+                .banReason(commandDTO.getBanReason())
+                .build()
+        );
     }
 
     public boolean isUserCurrentlyBanned(Long userId) {

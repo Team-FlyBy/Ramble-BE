@@ -91,7 +91,7 @@ public class UserReportService {
     }
 
     private UserReport getUserReportByReportUuid(UUID reportUuid) {
-        return userReportRepository.findByUuid(reportUuid)
+        return userReportRepository.findByExternalId(reportUuid)
                 .orElseThrow(() -> new IllegalArgumentException("UserReport not found with uuid: " + reportUuid));
     }
 

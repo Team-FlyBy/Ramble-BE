@@ -8,8 +8,8 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class NudeDetectionRequestDTO {
-    private UUID reportUuId;
+public class AutoNudeDetectionRequestedEventDTO {
+    private UUID userUuid;
     private String fileUrl;
     private String keyUrl;
 }

@@ -1,7 +1,7 @@
 package com.flyby.ramble.report.dto;
 
 import com.flyby.ramble.report.model.ReportReason;
-import lombok.AccessLevel;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -10,10 +10,18 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor
 public class ReportUserRequestDTO {
+    @NotNull
     private UUID reportedUserUuid;
+
+    @NotNull
     private UUID reportingUserUuid;
+
+    @NotNull
     private UUID sessionUuid;
+
+    @NotNull
     private ReportReason reportReason;
+
     private String reasonDetail;
 
     @Override

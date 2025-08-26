@@ -1,11 +1,12 @@
 package com.flyby.ramble.report.controller;
 
-import com.flyby.ramble.report.dto.AutoNudeDetectionRequestDTO;
 import com.flyby.ramble.report.dto.ReportUserRequestDTO;
 import com.flyby.ramble.report.service.ReportService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -18,19 +19,11 @@ import org.springframework.web.multipart.MultipartFile;
 public class ReportController {
     private final ReportService reportService;
 
-    @PostMapping("/reports")
-    public ResponseEntity<Void> reportByUser(@RequestPart("request") ReportUserRequestDTO requestDTO,
+    @PostMapping(value = "/user-reports", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> reportByUser(@Valid @RequestPart("request") ReportUserRequestDTO requestDTO,
                                              @RequestPart(value = "peerVideoSnapshot", required = false) MultipartFile peerVideoSnapshot) {
         log.debug("User report request received: {}", requestDTO);
         reportService.reportByUser(requestDTO, peerVideoSnapshot);
         return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-
-    @PostMapping("/auto-nude-detection")
-    public ResponseEntity<Void> reportNudeByAuto(@RequestPart("request") AutoNudeDetectionRequestDTO requestDTO,
-                                                         @RequestPart(value = "peerVideoSnapshot", required = false) MultipartFile peerVideoSnapshot) {
-        log.debug("Auto report request received: {}", requestDTO);
-
-        return ResponseEntity.ok().build();
     }
 }

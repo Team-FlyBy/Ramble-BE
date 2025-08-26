@@ -1,7 +1,7 @@
 package com.flyby.ramble.report.listener;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.flyby.ramble.report.dto.NudeDetectionResultDTO;
+import com.flyby.ramble.report.dto.NudeDetectionCompletedEventDTO;
 import com.flyby.ramble.report.service.UserReportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +18,13 @@ public class NudeDetectionResultListener {
     public void handleMessage(MapRecord<String, String, String> message) {
         try {
             String payload = message.getValue().get("payload");
-            NudeDetectionResultDTO result = objectMapper.readValue(payload, NudeDetectionResultDTO.class);
+
+            if (payload == null) {
+                log.error("Received message with null payload");
+                return;
+            }
+
+            NudeDetectionCompletedEventDTO result = objectMapper.readValue(payload, NudeDetectionCompletedEventDTO.class);
             log.info("Received nude detection result: {}", result);
 
             if (!result.getIsNude()) {
