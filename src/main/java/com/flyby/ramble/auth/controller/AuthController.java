@@ -4,6 +4,7 @@ import com.flyby.ramble.auth.dto.Tokens;
 import com.flyby.ramble.auth.service.AuthService;
 import com.flyby.ramble.auth.service.JwtService;
 import com.flyby.ramble.auth.util.CookieUtil;
+import com.flyby.ramble.common.annotation.SwaggerApi;
 import com.flyby.ramble.common.model.DeviceType;
 import com.flyby.ramble.common.constants.JwtConstants;
 import com.flyby.ramble.user.service.UserService;
@@ -22,7 +23,6 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     // TODO: 추후에 Facade 패턴 적용 고려
-    // TODO: SwaggerApi 어노테이션 적용
 
     private final AuthService authService;
     private final UserService userService;
@@ -30,6 +30,13 @@ public class AuthController {
     private final CookieUtil  cookieUtil;
 
     @PostMapping("/reissue")
+    @SwaggerApi(
+            summary = "토큰 재발급",
+            description = "Access Token과 Refresh Token을 재발급하는 API",
+            responseCode = "204",
+            responseDescription = "No Content",
+            content = {}
+    )
     public ResponseEntity<Void> reissueToken(@RequestHeader(JwtConstants.HEADER_DEVICE_TYPE) String deviceType,
                                              @CookieValue(JwtConstants.REFRESH_COOKIE) String cookie) {
         Tokens tokens   = jwtService.reissueTokens(cookie, DeviceType.from(deviceType));
@@ -43,6 +50,13 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
+    @SwaggerApi(
+            summary = "로그아웃",
+            description = "로그아웃 처리 및 토큰 무효화를 수행하는 API",
+            responseCode = "204",
+            responseDescription = "No Content",
+            content = {}
+    )
     public ResponseEntity<Void> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String header,
                                        @RequestHeader(JwtConstants.HEADER_DEVICE_TYPE) String deviceType,
                                        @AuthenticationPrincipal UserDetails user) {
@@ -59,6 +73,13 @@ public class AuthController {
 
     // 회원 탈퇴
     @PostMapping("/withdraw")
+    @SwaggerApi(
+            summary = "회원 탈퇴",
+            description = "회원 탈퇴 처리 및 관련 데이터 삭제를 수행하는 API",
+            responseCode = "204",
+            responseDescription = "No Content",
+            content = {}
+    )
     public ResponseEntity<Void> withdraw(@RequestHeader(HttpHeaders.AUTHORIZATION) String header,
                                          @AuthenticationPrincipal UserDetails user) {
         String token = extractToken(header);
