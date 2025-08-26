@@ -1,6 +1,7 @@
 package com.flyby.ramble.oauth.util;
 
 import com.flyby.ramble.common.model.OAuthProvider;
+import com.flyby.ramble.oauth.dto.GooglePersonInfo;
 import com.flyby.ramble.oauth.dto.OAuthRegisterDTO;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +9,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDate;
 
 @Slf4j
 @Component
@@ -26,14 +29,16 @@ public class OidcTokenParser {
                 .build();
     }
 
-    public OAuthRegisterDTO parseGoogleIdToken(String idToken) {
+    public OAuthRegisterDTO parseGoogleIdToken(String idToken, GooglePersonInfo personInfo) {
         try {
             Jwt jwt = jwtDecoder.decode(idToken);
-            String email = jwt.getClaimAsString("email");
-            String name  = jwt.getClaimAsString("name");
-            String sub   = jwt.getClaimAsString("sub");
+            String sub    = jwt.getClaimAsString("sub");
+            String email  = jwt.getClaimAsString("email");
+            String name   = jwt.getClaimAsString("name");
+            String gender = personInfo.gender();
+            LocalDate birthDate = personInfo.birthDate();
 
-            return new OAuthRegisterDTO(email, name, OAuthProvider.GOOGLE, sub);
+            return new OAuthRegisterDTO(OAuthProvider.GOOGLE, sub, email, name, gender, birthDate);
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid ID token", e);
         }
