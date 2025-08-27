@@ -108,7 +108,7 @@ public class GooglePeopleApiService {
         }
 
         JsonNode birthdays = root.path("birthdays").path(0).path("date");
-        if (birthdays.isMissingNode()) {
+        if (birthdays.isMissingNode() || !birthdays.has("year")) {
             return null;
         }
 
