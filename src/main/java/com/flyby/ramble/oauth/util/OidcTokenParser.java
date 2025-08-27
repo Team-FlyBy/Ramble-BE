@@ -3,6 +3,7 @@ package com.flyby.ramble.oauth.util;
 import com.flyby.ramble.common.model.OAuthProvider;
 import com.flyby.ramble.oauth.dto.GooglePersonInfo;
 import com.flyby.ramble.oauth.dto.OAuthRegisterDTO;
+import com.flyby.ramble.user.model.Gender;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -35,7 +36,7 @@ public class OidcTokenParser {
             String sub    = jwt.getClaimAsString("sub");
             String email  = jwt.getClaimAsString("email");
             String name   = jwt.getClaimAsString("name");
-            String gender = personInfo.gender();
+            Gender gender = personInfo.gender();
             LocalDate birthDate = personInfo.birthDate();
 
             return new OAuthRegisterDTO(OAuthProvider.GOOGLE, sub, email, name, gender, birthDate);

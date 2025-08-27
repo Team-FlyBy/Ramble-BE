@@ -3,6 +3,7 @@ package com.flyby.ramble.oauth.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flyby.ramble.oauth.dto.GooglePersonInfo;
+import com.flyby.ramble.user.model.Gender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
@@ -87,7 +88,7 @@ public class GooglePeopleApiService {
             String gender = extractGender(root, scopes);
             LocalDate birthDate = extractBirthDate(root, scopes);
 
-            return new GooglePersonInfo(gender, birthDate);
+            return new GooglePersonInfo(Gender.from(gender), birthDate);
         } catch (Exception e) {
             log.error("Failed to parse person info response", e);
             return new GooglePersonInfo(null, null);

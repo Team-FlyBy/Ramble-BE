@@ -64,7 +64,7 @@ public class User extends BaseEntity {
     private List<RefreshToken> refreshTokens = new ArrayList<>();
 
     @Builder
-    public User(String username, String email, OAuthProvider provider, String providerId, String gender, LocalDate birthDate) {
+    public User(String username, String email, OAuthProvider provider, String providerId, Gender gender, LocalDate birthDate) {
         if (username == null || email == null || provider == null || providerId == null) {
             throw new IllegalArgumentException("필수 필드는 null이 될 수 없습니다");
         }
@@ -77,7 +77,7 @@ public class User extends BaseEntity {
         this.email = email;
         this.provider = provider;
         this.providerId = providerId;
-        this.gender = Gender.from(gender);
+        this.gender = gender;
         this.birthDate = birthDate;
 
         this.externalId = UUID.randomUUID();

@@ -1,6 +1,7 @@
 package com.flyby.ramble.oauth.dto;
 
 import com.flyby.ramble.common.model.OAuthProvider;
+import com.flyby.ramble.user.model.Gender;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -17,7 +18,7 @@ public record OAuthRegisterDTO(
         String email,
         @NotBlank(message = "Username is required")
         String username,
-        String gender,
+        Gender gender,
         LocalDate birthDate
 ) {
 }
