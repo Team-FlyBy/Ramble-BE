@@ -39,6 +39,10 @@ public class OidcTokenParser {
             Gender gender = personInfo.gender();
             LocalDate birthDate = personInfo.birthDate();
 
+            if (email == null || name == null) {
+                throw new IllegalArgumentException("Missing required claims in ID token");
+            }
+
             return new OAuthRegisterDTO(OAuthProvider.GOOGLE, sub, email, name, gender, birthDate);
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid ID token", e);
