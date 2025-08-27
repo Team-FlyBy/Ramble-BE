@@ -42,7 +42,7 @@ public class User extends BaseEntity {
     @Column(name = "provider", nullable = false, updatable = false)
     private OAuthProvider provider;
 
-    @Column(name = "provider_id", nullable = false, updatable = false)
+    @Column(name = "provider_id", nullable = false)
     private String providerId;
 
     @Enumerated(EnumType.STRING)
@@ -64,8 +64,8 @@ public class User extends BaseEntity {
     private List<RefreshToken> refreshTokens = new ArrayList<>();
 
     @Builder
-    public User(String username, String email, OAuthProvider provider, String providerId, Gender gender, LocalDate birthDate) {
-        if (username.isBlank() || email.isBlank() || providerId.isBlank() || provider == null) {
+    public User(@NonNull String username, @NonNull String email, @NonNull OAuthProvider provider, @NonNull String providerId, @NonNull Gender gender, LocalDate birthDate) {
+        if (username.isBlank() || email.isBlank() || providerId.isBlank()) {
             throw new IllegalArgumentException("필수 필드는 빈 값이 될 수 없습니다");
         }
 
