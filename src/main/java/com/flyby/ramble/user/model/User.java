@@ -65,11 +65,7 @@ public class User extends BaseEntity {
 
     @Builder
     public User(String username, String email, OAuthProvider provider, String providerId, Gender gender, LocalDate birthDate) {
-        if (username == null || email == null || provider == null || providerId == null) {
-            throw new IllegalArgumentException("필수 필드는 null이 될 수 없습니다");
-        }
-
-        if (username.isEmpty() || email.isEmpty() || providerId.isEmpty()) {
+        if (username.isBlank() || email.isBlank() || providerId.isBlank() || provider == null) {
             throw new IllegalArgumentException("필수 필드는 빈 값이 될 수 없습니다");
         }
 
@@ -83,6 +79,17 @@ public class User extends BaseEntity {
         this.externalId = UUID.randomUUID();
         this.role = Role.ROLE_USER;
         this.status = Status.ACTIVE;
+    }
+
+    public User anonymize() {
+        this.username = "user_" + this.externalId;
+        this.email = "email_" + this.externalId + "@example.com";
+        this.providerId = "provider_id_" + this.externalId;
+        this.gender = Gender.UNKNOWN;
+        this.birthDate = null;
+        this.status = Status.INACTIVE;
+
+        return this;
     }
 
 }
