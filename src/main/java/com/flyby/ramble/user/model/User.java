@@ -54,7 +54,7 @@ public class User extends BaseEntity {
     private Status status;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "gender")
+    @Column(name = "gender", nullable = false)
     private Gender gender;
 
     @Column(name = "birth_date")
