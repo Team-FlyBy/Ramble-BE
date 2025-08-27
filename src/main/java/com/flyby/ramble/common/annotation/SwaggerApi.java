@@ -1,5 +1,6 @@
 package com.flyby.ramble.common.annotation;
 
+import com.flyby.ramble.common.dto.ResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -56,7 +57,7 @@ public @interface SwaggerApi {
     Content[] content() default {
             @Content(
                     mediaType = "application/json",
-                    schema = @Schema(implementation = String.class)
+                    schema = @Schema(implementation = ResponseDTO.class)
             )
     };
 

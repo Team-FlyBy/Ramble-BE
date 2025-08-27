@@ -3,7 +3,6 @@ package com.flyby.ramble.user.service;
 import com.flyby.ramble.common.exception.BaseException;
 import com.flyby.ramble.common.exception.ErrorCode;
 import com.flyby.ramble.oauth.dto.OAuthRegisterDTO;
-import com.flyby.ramble.user.model.Status;
 import com.flyby.ramble.user.model.User;
 import com.flyby.ramble.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -30,6 +29,8 @@ public class UserService {
                             .username(oAuthRegisterDTO.username())
                             .provider(oAuthRegisterDTO.provider())
                             .providerId(oAuthRegisterDTO.providerId())
+                            .gender(oAuthRegisterDTO.gender())
+                            .birthDate(oAuthRegisterDTO.birthDate())
                             .build()));
         } catch (DataIntegrityViolationException e) {
             return userRepository.findByProviderAndProviderId(oAuthRegisterDTO.provider(), oAuthRegisterDTO.providerId())
@@ -41,14 +42,7 @@ public class UserService {
         User user = userRepository.findByExternalId(UUID.fromString(userExternalId))
                 .orElseThrow(() -> new BaseException(ErrorCode.USER_NOT_FOUND));
 
-        userRepository.anonymizeFields(
-                user.getId(),
-                Status.INACTIVE,
-                "email_" + user.getExternalId() + "@example.com",
-                "user_" + user.getExternalId(),
-                "provider_id_" + user.getExternalId()
-        );
-
+        userRepository.save(user.anonymize());
     }
 
 }
