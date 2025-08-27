@@ -72,6 +72,10 @@ public class OAuthService {
         String registrationId = "google-" + deviceType.name().toLowerCase();
         ClientRegistration registration = clientRegistrationRepo.findByRegistrationId(registrationId);
 
+        if (registration == null) {
+            throw new IllegalStateException("Google OAuth " + registrationId + " not found.");
+        }
+
         OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> accessTokenResponseClient =
                 new RestClientAuthorizationCodeTokenResponseClient();
 
