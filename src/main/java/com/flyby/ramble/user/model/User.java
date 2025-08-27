@@ -82,9 +82,9 @@ public class User extends BaseEntity {
     }
 
     public User anonymize() {
-        this.username = "user_" + this.externalId;
-        this.email = "email_" + this.externalId + "@example.com";
-        this.providerId = "provider_id_" + this.externalId;
+        this.username = "anonymous_user_" + this.externalId;
+        this.email = "anonymous_email_" + this.externalId + "@example.com";
+        this.providerId = "anonymous_provider_id_" + this.externalId;
         this.gender = Gender.UNKNOWN;
         this.birthDate = null;
         this.status = Status.INACTIVE;
