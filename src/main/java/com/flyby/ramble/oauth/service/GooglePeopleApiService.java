@@ -42,7 +42,7 @@ public class GooglePeopleApiService {
         }
 
         String url = UriComponentsBuilder.fromUriString(PEOPLE_API_URL)
-                .queryParam("personFields", personFields)
+                .queryParam("personFields", personFields.get())
                 .queryParam("sources", "READ_SOURCE_TYPE_PROFILE")
                 .build(true)
                 .toUriString();
