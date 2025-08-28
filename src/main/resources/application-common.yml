@@ -1,5 +1,6 @@
 server:
   port: 8080
+  forward-headers-strategy: framework # native도 고려
 
 spring:
   jackson:
