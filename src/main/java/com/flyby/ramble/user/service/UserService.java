@@ -3,12 +3,13 @@ package com.flyby.ramble.user.service;
 import com.flyby.ramble.common.exception.BaseException;
 import com.flyby.ramble.common.exception.ErrorCode;
 import com.flyby.ramble.oauth.dto.OAuthRegisterDTO;
+import com.flyby.ramble.user.dto.UserInfoDTO;
 import com.flyby.ramble.user.model.User;
 import com.flyby.ramble.user.repository.UserRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -18,6 +19,13 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
+
+    @Transactional(readOnly = true)
+    public UserInfoDTO getUserByExternalId(String userExternalId) {
+        return userRepository.findByExternalId(UUID.fromString(userExternalId))
+                .map(UserInfoDTO::from)
+                .orElseThrow(() -> new BaseException(ErrorCode.USER_NOT_FOUND));
+    }
 
     // TODO: 동일한 유저의 중복 생성 가능성 판단 후 수정
     // TODO: 커스텀 예외 처리 추후 추가
