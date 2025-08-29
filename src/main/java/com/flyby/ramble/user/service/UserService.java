@@ -7,6 +7,7 @@ import com.flyby.ramble.user.dto.UserInfoDTO;
 import com.flyby.ramble.user.model.User;
 import com.flyby.ramble.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ public class UserService {
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "user", key = "#userExternalId", unless = "#result == null")
     public UserInfoDTO getUserByExternalId(String userExternalId) {
         return userRepository.findByExternalId(UUID.fromString(userExternalId))
                 .map(UserInfoDTO::from)
