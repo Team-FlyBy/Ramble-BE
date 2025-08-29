@@ -4,30 +4,37 @@ import com.flyby.ramble.common.model.CacheType;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.cache.caffeine.CaffeineCacheManager;
+import org.springframework.cache.caffeine.CaffeineCache;
+import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableCaching
 public class CacheConfig {
 
     @Bean
-    public Caffeine<Object, Object> caffeineConfig() {
-        return Caffeine.newBuilder()
-                .maximumSize(10_000)
-                .expireAfterWrite(Duration.ofMinutes(30)) // 30분 후 만료
-                .recordStats();
+    public CacheManager cacheManager() {
+        List<CaffeineCache> caches = Arrays.stream(CacheType.values())
+                .map(this::buildCaffeineCache)
+                .toList();
+
+        SimpleCacheManager cacheManager = new SimpleCacheManager();
+        cacheManager.setCaches(caches);
+        return cacheManager;
     }
 
-    @Bean
-    public CacheManager cacheManager(Caffeine<Object, Object> caffeine) {
-        CaffeineCacheManager mgr = new CaffeineCacheManager();
-        mgr.setCaffeine(caffeine);
-        mgr.setCacheNames(CacheType.names());
-        return mgr;
+    private CaffeineCache buildCaffeineCache(CacheType type) {
+        Caffeine<Object, Object> caffeine = Caffeine.newBuilder()
+                .recordStats()
+                .expireAfterWrite(Duration.ofMinutes(type.getExpireAfterWrite()))
+                .maximumSize(type.getMaximumSize());
+
+        return new CaffeineCache(type.getCacheName(), caffeine.build());
     }
 
 }

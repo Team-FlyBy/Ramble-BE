@@ -3,25 +3,14 @@ package com.flyby.ramble.common.model;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import java.util.Arrays;
-import java.util.List;
-
 @Getter
 @RequiredArgsConstructor
 public enum CacheType {
-    JWT_BLACKLIST("jwtBlacklist");
+    // TODO: JWT_BLACKLIST는 Redis로 변경
+    JWT_BLACKLIST("jwtBlacklist", 30, 10000), // 30분, 최대 10,000개
+    IP_REGION("ipRegion", 720, 20000);        // 720분(12시간), 최대 20,000개
 
-    private final String value;
-
-    /**
-     * 모든 캐시 이름을 반환
-     *
-     * @return 캐시 이름 목록 (불변 리스트)
-     */
-    public static List<String> names() {
-        return Arrays.stream(CacheType.values())
-                .map(CacheType::getValue)
-                .toList();
-    }
-
+    private final String cacheName;
+    private final int expireAfterWrite; // 분(minutes) 단위
+    private final int maximumSize;
 }
