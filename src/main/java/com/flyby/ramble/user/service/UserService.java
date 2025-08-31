@@ -29,6 +29,10 @@ public class UserService {
                 .orElseThrow(() -> new BaseException(ErrorCode.USER_NOT_FOUND));
     }
 
+    public User getUserProxyById(Long userId) {
+        return userRepository.getReferenceById(userId);
+    }
+
     // TODO: 동일한 유저의 중복 생성 가능성 판단 후 수정
     // TODO: 커스텀 예외 처리 추후 추가
     public User registerOrLogin(OAuthRegisterDTO oAuthRegisterDTO) {
