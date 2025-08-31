@@ -1,6 +1,8 @@
 package com.flyby.ramble.session.model;
 
 import com.flyby.ramble.common.model.BaseEntity;
+import com.flyby.ramble.user.model.Gender;
+import com.flyby.ramble.user.model.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -8,6 +10,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -31,6 +35,9 @@ public class Session extends BaseEntity {
     @Column(name = "started_at", nullable = false)
     private LocalDateTime startedAt;
 
+    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<SessionParticipant> participants = new ArrayList<>();
+
     @Builder
     public Session(LocalDateTime startedAt) {
         if (startedAt == null) {
@@ -39,4 +46,17 @@ public class Session extends BaseEntity {
         this.externalId = UUID.randomUUID();
         this.startedAt = startedAt;
     }
+
+    public void addParticipant(User user, Gender gender, String region, String language) {
+        SessionParticipant participant = SessionParticipant.builder()
+                .session(this)
+                .user(user)
+                .gender(gender)
+                .region(region)
+                .language(language)
+                .build();
+
+        this.participants.add(participant);
+    }
+
 }
