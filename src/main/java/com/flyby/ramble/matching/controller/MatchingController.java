@@ -3,7 +3,7 @@ package com.flyby.ramble.matching.controller;
 import com.flyby.ramble.common.service.GeoIpService;
 import com.flyby.ramble.matching.dto.MatchRequestDTO;
 import com.flyby.ramble.matching.service.MatchingService;
-import com.flyby.ramble.signaling.dto.SignalMessage;
+import com.flyby.ramble.matching.dto.SignalMessageDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -31,7 +31,7 @@ public class MatchingController {
     }
 
     @MessageMapping("/match/signaling")
-    public void handleSignalingMessage(@Payload SignalMessage message, Principal principal) {
+    public void handleSignalingMessage(@Payload SignalMessageDTO message, Principal principal) {
         String userId = getUserId(principal);
 
         matchingService.forwardSignalingMessage(userId, message);

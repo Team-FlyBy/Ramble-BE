@@ -1,13 +1,13 @@
-package com.flyby.ramble.signaling.dto;
+package com.flyby.ramble.matching.dto;
 
-import com.flyby.ramble.signaling.model.SignalType;
+import com.flyby.ramble.matching.model.SignalType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 
 @Schema(title = "SignalMessage", description = "WebRTC 신호 메시지")
 @Data
 @NoArgsConstructor
-public class SignalMessage {
+public class SignalMessageDTO {
 
     private String senderId;
     private String receiverId;
@@ -15,7 +15,7 @@ public class SignalMessage {
     private Object data;
 
     @Builder
-    public SignalMessage(String senderId, String receiverId, SignalType type, Object data) {
+    public SignalMessageDTO(String senderId, String receiverId, SignalType type, Object data) {
         this.senderId = senderId;
         this.receiverId = receiverId;
         this.type = type;

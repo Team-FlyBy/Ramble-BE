@@ -8,7 +8,7 @@ import com.flyby.ramble.matching.dto.MatchingSessionInfoDTO;
 import com.flyby.ramble.session.event.SessionEndedEvent;
 import com.flyby.ramble.session.model.Session;
 import com.flyby.ramble.session.service.SessionService;
-import com.flyby.ramble.signaling.dto.SignalMessage;
+import com.flyby.ramble.matching.dto.SignalMessageDTO;
 import com.flyby.ramble.user.dto.UserInfoDTO;
 import com.flyby.ramble.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -79,7 +79,7 @@ public class MatchingService {
      * @param senderId 메시지를 보낸 사용자
      * @param message    전송할 SignalMessage
      */
-    public void forwardSignalingMessage(String senderId, SignalMessage message) {
+    public void forwardSignalingMessage(String senderId, SignalMessageDTO message) {
         sendSignalingMessage(senderId, message);
     }
 
@@ -257,7 +257,7 @@ public class MatchingService {
         messagingTemplate.convertAndSendToUser(userId, MatchingConstants.SUBSCRIPTION_MATCHING, payload);
     }
 
-    private void sendSignalingMessage(String userId, SignalMessage message) {
+    private void sendSignalingMessage(String userId, SignalMessageDTO message) {
         messagingTemplate.convertAndSendToUser(userId, MatchingConstants.SUBSCRIPTION_SIGNALING, message);
     }
 

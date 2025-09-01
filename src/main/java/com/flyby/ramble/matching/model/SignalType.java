@@ -1,4 +1,4 @@
-package com.flyby.ramble.signaling.model;
+package com.flyby.ramble.matching.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
