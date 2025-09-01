@@ -10,7 +10,8 @@ import com.flyby.ramble.common.exception.BaseException;
 import com.flyby.ramble.common.exception.ErrorCode;
 import com.flyby.ramble.common.model.DeviceType;
 import com.flyby.ramble.common.properties.JwtProperties;
-import com.flyby.ramble.user.model.User;
+import com.flyby.ramble.user.dto.UserInfoDTO;
+import com.flyby.ramble.user.service.UserService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import lombok.RequiredArgsConstructor;
@@ -31,11 +32,12 @@ import java.util.UUID;
 public class JwtService {
 
     private final JwtProperties jwtProperties;
-
     private final JwtUtil jwtUtil;
+    private final UserService userService;
+
     private final RefreshTokenRepository refreshTokenRepository;
 
-    public Tokens generateTokens(User user, DeviceType deviceType) {
+    public Tokens generateTokens(UserInfoDTO user, DeviceType deviceType) {
         JwtTokenRequest accRequest = JwtTokenRequest.of(user, deviceType);
         JwtTokenRequest refRequest = JwtTokenRequest.of(user, deviceType);
 
@@ -50,7 +52,7 @@ public class JwtService {
     public Tokens reissueTokens(String refToken, DeviceType deviceType) {
         Claims refClaims = parseToken(refToken);
         String jti       = refClaims.getId();
-        UUID   userId    = UUID.fromString(refClaims.getSubject());
+        String userId    = refClaims.getSubject();
         DeviceType type  = DeviceType.from(refClaims.get(JwtConstants.CLAIM_DEVICE_TYPE, String.class));
 
         if (type != deviceType) {
@@ -60,12 +62,12 @@ public class JwtService {
         RefreshToken refreshToken = refreshTokenRepository.findByIdAndRevokedFalse(UUID.fromString(jti))
                 .orElseThrow(() -> {
                     log.warn("Invalid refresh token used: {}, userId: {}, deviceType: {}", jti, userId, type);
-                    refreshTokenRepository.revokeAllByUserIdAndDeviceType(userId, type);
+                    refreshTokenRepository.revokeAllByUserIdAndDeviceType(UUID.fromString(userId), type);
                     return new BaseException(ErrorCode.ACCESS_DENIED);
                 });
 
         refreshTokenRepository.save(refreshToken.revoke());
-        return generateTokens(refreshToken.getUser(), type);
+        return generateTokens(userService.getUserByExternalId(userId), type);
     }
 
     public void revokeAllRefreshTokenByUserAndDevice(String userId, DeviceType deviceType) {
@@ -87,7 +89,7 @@ public class JwtService {
         }
     }
 
-    private RefreshToken createRefreshToken(User user, JwtTokenRequest request) {
+    private RefreshToken createRefreshToken(UserInfoDTO user, JwtTokenRequest request) {
         LocalDateTime exp = Instant.now()
                 .plusMillis(jwtProperties.getRefreshExpiration())
                 .atZone(ZoneId.systemDefault())
@@ -95,7 +97,7 @@ public class JwtService {
 
         return RefreshToken.builder()
                 .id(request.jti())
-                .user(user)
+                .user(userService.getUserProxyById(user.getId()))
                 .deviceType(request.deviceType())
                 .expiresAt(exp)
                 .build();
