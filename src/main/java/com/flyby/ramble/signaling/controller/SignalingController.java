@@ -1,7 +1,7 @@
 package com.flyby.ramble.signaling.controller;
 
-import com.flyby.ramble.signaling.dto.SignalMessage;
-import com.flyby.ramble.signaling.model.SignalType;
+import com.flyby.ramble.matching.dto.SignalMessageDTO;
+import com.flyby.ramble.matching.model.SignalType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -20,14 +20,15 @@ public class SignalingController {
     private final SimpMessagingTemplate messagingTemplate;
     private final Queue<String> waitingQueue = new ConcurrentLinkedQueue<>();
 
+    @Deprecated(since = "2025-09-01", forRemoval = true)
     @MessageMapping("/signal")
-    public void handleSignalMessage(@Payload SignalMessage signalMessage, Principal principal) {
+    public void handleSignalMessage(@Payload SignalMessageDTO signalMessageDTO, Principal principal) {
         String receiverId;
         String senderId = Optional.ofNullable(principal)
                 .map(Principal::getName)
                 .orElseThrow(() -> new IllegalArgumentException("인증된 사용자 ID가 유효하지 않습니다."));
 
-        if (signalMessage.getType() == SignalType.OFFER) {
+        if (signalMessageDTO.getType() == SignalType.OFFER) {
             receiverId = waitingQueue.poll();
 
             if (receiverId == null) {
@@ -35,11 +36,11 @@ public class SignalingController {
                 return;
             }
         } else {
-            receiverId = signalMessage.getReceiverId();
+            receiverId = signalMessageDTO.getReceiverId();
         }
 
-        signalMessage.setSenderId(senderId);
-        messagingTemplate.convertAndSendToUser(receiverId, "/queue/signal", signalMessage);
+        signalMessageDTO.setSenderId(senderId);
+        messagingTemplate.convertAndSendToUser(receiverId, "/queue/signal", signalMessageDTO);
     }
 
 }
