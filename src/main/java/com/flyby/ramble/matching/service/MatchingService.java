@@ -3,41 +3,64 @@ package com.flyby.ramble.matching.service;
 import com.flyby.ramble.matching.constants.MatchingConstants;
 import com.flyby.ramble.matching.dto.MatchRequestDTO;
 import com.flyby.ramble.matching.dto.MatchResultDTO;
-import com.flyby.ramble.matching.dto.MatchingProfileDTO;
-import com.flyby.ramble.matching.dto.MatchingSessionInfoDTO;
+import com.flyby.ramble.matching.dto.SignalMessageDTO;
+import com.flyby.ramble.matching.model.MatchingProfile;
+import com.flyby.ramble.matching.model.MatchingSessionInfo;
 import com.flyby.ramble.session.event.SessionEndedEvent;
 import com.flyby.ramble.session.model.Session;
 import com.flyby.ramble.session.service.SessionService;
-import com.flyby.ramble.matching.dto.SignalMessageDTO;
 import com.flyby.ramble.user.dto.UserInfoDTO;
 import com.flyby.ramble.user.service.UserService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RList;
+import org.redisson.api.RLiveObjectService;
 import org.redisson.api.RLock;
-import org.redisson.api.RMap;
+import org.redisson.api.RScoredSortedSet;
 import org.redisson.api.RedissonClient;
+import org.redisson.api.condition.Conditions;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Map;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class MatchingService {
     private final RedissonClient redissonClient;
+    private final RLiveObjectService liveObjectService;
+    private final RScoredSortedSet<String> matchingPoolIndex;
+
     private final SimpMessagingTemplate messagingTemplate;
+    private final ApplicationEventPublisher eventPublisher;
 
     private final UserService userService;
     private final SessionService sessionService;
 
-    private final ApplicationEventPublisher eventPublisher;
+    // TODO: 추후 책임 분리. 점수 계산, 매칭 로직, 세션 관리, 시그널 중계 등 분할
+    // TODO: Redisson Live Object (대기열) 만료 -> 사용자에게 알림 (매칭 실패)
+    // TODO: 전역 락 방식 개선
+
+    public MatchingService(RedissonClient redissonClient,
+                           SimpMessagingTemplate messagingTemplate,
+                           ApplicationEventPublisher eventPublisher,
+                           UserService userService,
+                           SessionService sessionService) {
+        this.redissonClient = redissonClient;
+        this.liveObjectService = redissonClient.getLiveObjectService();
+        this.matchingPoolIndex = redissonClient.getScoredSortedSet(MatchingConstants.MATCHMAKING_POOL_KEY);
+
+        this.messagingTemplate = messagingTemplate;
+        this.eventPublisher = eventPublisher;
+
+        this.userService = userService;
+        this.sessionService = sessionService;
+    }
 
     /**
      * 신규 사용자의 매칭을 요청하거나 대기열에 추가
@@ -45,21 +68,20 @@ public class MatchingService {
     public void findMatchOrAddToQueue(String requesterId, String requesterRegion, MatchRequestDTO request) {
         RLock lock = redissonClient.getLock(MatchingConstants.MATCHMAKING_LOCK_KEY);
 
+        UserInfoDTO requesterInfo = userService.getUserByExternalId(requesterId);
+        MatchingProfile requesterProfile = createRequesterProfile(requesterInfo, requesterRegion, request);
+
         try {
-            boolean isLocked = lock.tryLock(5, 10, TimeUnit.SECONDS);
+            boolean isLocked = lock.tryLock(MatchingConstants.LOCK_WAIT_SECONDS, MatchingConstants.LOCK_LEASE_SECONDS, TimeUnit.SECONDS);
             if (!isLocked) {
                 log.warn("매칭 락 획득 실패: {}", requesterId);
                 throw new IllegalStateException("일시적으로 매칭 서버가 혼잡합니다. 잠시 후 다시 시도해주세요.");
             }
 
+            // 기존 대기열 또는 채팅 세션 정리
             cleanupUser(requesterId);
 
-            UserInfoDTO requesterInfo = userService.getUserByExternalId(requesterId);
-            MatchingProfileDTO requesterProfile = createRequesterProfile(requesterInfo, requesterRegion, request);
-
-            // Redisson RMap 사용
-            getUserProfileMap().put(requesterId, requesterProfile);
-
+            // 최적의 파트너 탐색
             findBestPartner(requesterProfile).ifPresentOrElse(
                     partner -> handleMatchSuccess(requesterProfile, partner),
                     () -> addToWaitingQueue(requesterProfile)
@@ -80,7 +102,8 @@ public class MatchingService {
      * @param message    전송할 SignalMessage
      */
     public void forwardSignalingMessage(String senderId, SignalMessageDTO message) {
-        sendSignalingMessage(senderId, message);
+        message.setSenderId(senderId);
+        sendSignalingMessage(message.getReceiverId(), message);
     }
 
     /**
@@ -93,25 +116,20 @@ public class MatchingService {
 
     /* --- 매칭 ---- */
 
-    private Optional<MatchingProfileDTO> findBestPartner(MatchingProfileDTO requester) {
-        RList<String> waitingQueue = getWaitingQueue();
-        RMap<String, MatchingProfileDTO> userProfileMap = getUserProfileMap();
+    private Optional<MatchingProfile> findBestPartner(MatchingProfile requester) {
+        Collection<String> waitingQueue = matchingPoolIndex.valueRange(0, MatchingConstants.MAX_WAITING_QUEUE_SIZE - 1);
 
-        if (waitingQueue.isEmpty()) {
-            return Optional.empty();
-        }
-
-        MatchingProfileDTO bestMatch = null;
+        MatchingProfile bestMatch = null;
         int maxScore = -1;
 
         for (String partnerId : waitingQueue) {
-            MatchingProfileDTO partner = userProfileMap.get(partnerId);
+            MatchingProfile partner = liveObjectService.get(MatchingProfile.class, partnerId);
 
             if (partner == null || !isMatchable(requester, partner)) continue;
 
             int currentScore = calculateScore(requester, partner);
 
-            if (currentScore > MatchingConstants.MINIMUM_MATCH_SCORE && currentScore > maxScore) {
+            if (currentScore >= MatchingConstants.MINIMUM_MATCH_SCORE && currentScore > maxScore) {
                 maxScore = currentScore;
                 bestMatch = partner;
             }
@@ -120,105 +138,113 @@ public class MatchingService {
         return Optional.ofNullable(bestMatch);
     }
 
-    private boolean isMatchable(MatchingProfileDTO userA, MatchingProfileDTO userB) {
-        // 1. 자기 자신과 매칭 불가
-        if (Objects.equals(userA.getId(), userB.getId())) return false;
-
-        // 2. 상호 차단 목록 확인 (서로 신고 이력이 있으면 매칭 불가)
-        // TODO: 차단 목록 로직 구현
-
-        return true;
+    private boolean isMatchable(MatchingProfile userA, MatchingProfile userB) {
+        return !Objects.equals(userA.getUserExternalId(), userB.getUserExternalId())
+                && !isBlocked(userA.getUserExternalId(), userB.getUserExternalId());
     }
 
-    private int calculateScore(MatchingProfileDTO userA, MatchingProfileDTO userB) {
+    private boolean isBlocked(String aExternalId, String bExternalId) {
+        // 차단/신고 로직 미구현 -> 현재는 항상 false
+        return false;
+    }
+
+    private int calculateScore(MatchingProfile userA, MatchingProfile userB) {
         int score = 0;
 
-        // 지역 일치 시 점수 추가
-        if (Objects.equals(userA.getSelectedRegion(), userB.getRegion())) score += 15;
-        if (Objects.equals(userA.getRegion(), userB.getSelectedRegion())) score += 15;
-        if (Objects.equals(userA.getRegion(), userB.getRegion())) score += 5;
+        // 지역 선호 매칭 (상대방 실제 지역이 내가 선택한 지역)
+        if (Objects.equals(userA.getSelectedRegion(), userB.getRegion())) score += MatchingConstants.REGION_MATCH_SCORE;
+        if (Objects.equals(userB.getSelectedRegion(), userA.getRegion())) score += MatchingConstants.REGION_MATCH_SCORE;
+        // 동일 실제 지역 (부분 매칭)
+        if (Objects.equals(userA.getRegion(), userB.getRegion())) score += MatchingConstants.REGION_PARTIAL_MATCH_SCORE;
 
-        // 성별 다를 시 점수 추가
-        if (!Objects.equals(userA.getSelectedGender(), userB.getSelectedGender())) score += 5;
-        if (!Objects.equals(userA.getSelectedGender(), userB.getGender())) score += 5;
-        if (!Objects.equals(userA.getGender(), userB.getSelectedGender())) score += 5;
-        if (!Objects.equals(userA.getGender(), userB.getGender())) score += 5;
+        // 성별 다를 시 점수 추가 (선택한 성별과 상대방 실제 성별이 다를 시)
+        if (!Objects.equals(userA.getSelectedGender(), userB.getGender())) score += MatchingConstants.GENDER_DIFFERENCE_SCORE;
+        if (!Objects.equals(userB.getSelectedGender(), userA.getGender())) score += MatchingConstants.GENDER_DIFFERENCE_SCORE;
+        // 실제 성별이 다를 시 점수 추가
+        if (!Objects.equals(userA.getGender(), userB.getGender())) score += MatchingConstants.GENDER_DIFFERENCE_SCORE;
 
-        // 언어 일치 시 점수 추가
-        if (Objects.equals(userA.getLanguage(), userB.getLanguage())) score += 5;
+        // 언어 일치
+        if (Objects.equals(userA.getLanguage(), userB.getLanguage())) score += MatchingConstants.LANGUAGE_MATCH_SCORE;
 
         // 대기 시간에 비례하여 점수 추가 (10초당 1점)
         long currentTime = System.currentTimeMillis();
         long waitTimeB = (currentTime - userB.getQueueEntryTime()) / 1000;
-        score += (int) (waitTimeB / 10) * MatchingConstants.WAITING_SCORE_WEIGHT_PER_10_SECONDS;
-
+        score += (int) (waitTimeB / 10) * MatchingConstants.WAITING_SCORE_PER_10_SECONDS;
         return score;
     }
 
-    private void handleMatchSuccess(MatchingProfileDTO userA, MatchingProfileDTO userB) {
-        log.info("매칭 성공 userA={}, userB={}", userA, userB);
-        getWaitingQueue().remove(userB.getExternalId());
+    private void handleMatchSuccess(MatchingProfile userA, MatchingProfile userB) {
+        // 안전 제거 (존재 시)
+        matchingPoolIndex.remove(userB.getUserExternalId());
+        MatchingProfile existing = liveObjectService.get(MatchingProfile.class, userB.getUserExternalId());
+        if (existing != null) {
+            liveObjectService.delete(existing);
+        }
 
         // DB session 저장
         Session session = sessionService.createSession(userA, userB);
 
         // Redis에 채팅 세션 기록
-        RMap<String, MatchingSessionInfoDTO> chatSessionMap = getChatSessionMap();
-        chatSessionMap.putAll(Map.of(
-                userA.getExternalId(), new MatchingSessionInfoDTO(session.getExternalId(), userB.getExternalId(), session.getStartedAt()),
-                userB.getExternalId(), new MatchingSessionInfoDTO(session.getExternalId(), userA.getExternalId(), session.getStartedAt())
-        ));
+        MatchingSessionInfo liveSession = MatchingSessionInfo.builder()
+                .sessionId(session.getExternalId().toString())
+                .participantAId(userA.getUserExternalId())
+                .participantBId(userB.getUserExternalId())
+                .build();
+        liveSession = liveObjectService.persist(liveSession);
+        liveObjectService.asLiveObject(liveSession).expire(Duration.ofMinutes(5)); // 5분 후 자동 만료
 
         // 양쪽 사용자에게 매칭 성공 알림 전송
-        sendMatchingResult(userA.getExternalId(), new MatchResultDTO("SUCCESS", userB.getExternalId()));
-        sendMatchingResult(userA.getExternalId(), new MatchResultDTO("SUCCESS", userA.getExternalId()));
+        sendMatchingResult(userA.getUserExternalId(), new MatchResultDTO("SUCCESS", userB.getUserExternalId()));
+        sendMatchingResult(userB.getUserExternalId(), new MatchResultDTO("SUCCESS", userA.getUserExternalId()));
     }
 
-    private void addToWaitingQueue(MatchingProfileDTO userProfile) {
-        log.info("대기열에 추가 userProfile={}", userProfile);
-        String userId = userProfile.getExternalId();
-        userProfile.setQueueEntryTime(System.currentTimeMillis());
+    private void addToWaitingQueue(MatchingProfile userProfile) {
+        long now = System.currentTimeMillis();
 
-        // 프로필 정보 갱신 후 대기열에 추가
-        getUserProfileMap().put(userId, userProfile);
-        getWaitingQueue().add(userId);
+        // Redis 저장 (대기열)
+        userProfile.setQueueEntryTime(now);
+        liveObjectService.persist(userProfile);
+        matchingPoolIndex.add(now, userProfile.getUserExternalId());
 
-        MatchResultDTO waitingResult = new MatchResultDTO("WAITING", null);
-        sendMatchingResult(userId, waitingResult);
+        // 대기 상태 알림 전송
+        sendMatchingResult(userProfile.getUserExternalId(), new MatchResultDTO("WAITING", null));
     }
 
     /* --- 매칭 취소 ---- */
 
     private void cancelWaitingUser(String userId) {
-        RList<String> waitingQueue = getWaitingQueue();
+        MatchingProfile userProfile = liveObjectService.get(MatchingProfile.class, userId);
 
-        if (waitingQueue.remove(userId)) { // List에서 성공적으로 제거되면 true 반환
-            getUserProfileMap().remove(userId);
+        if (userProfile != null) {
+            liveObjectService.delete(userProfile);
+            matchingPoolIndex.remove(userId);
         }
     }
 
     private void leaveChatSession(String userId) {
-        RMap<String, MatchingSessionInfoDTO> chatSessionMap = getChatSessionMap();
-        MatchingSessionInfoDTO sessionInfo = chatSessionMap.get(userId);
+        MatchingSessionInfo sessionInfo = findSessionByParticipantId(userId);
 
         if (sessionInfo != null) {
-            String partnerId = sessionInfo.getPartnerInfo();
+            String partnerId = sessionInfo.getParticipantAId().equals(userId)
+                    ? sessionInfo.getParticipantBId()
+                    : sessionInfo.getParticipantAId();
             MatchResultDTO payload = new MatchResultDTO("LEAVE", userId);
 
             // 두 사용자의 세션 제거
-            chatSessionMap.fastRemove(userId, partnerId);
+            liveObjectService.delete(sessionInfo);
+            // 상대방에게 종료 알림 전송
             sendMatchingResult(partnerId, payload);
-
+            // 세션 종료 이벤트 발행
             publishSessionEndedEvent(sessionInfo);
         }
     }
 
     /* --- 헬퍼 ---- */
 
-    private MatchingProfileDTO createRequesterProfile(UserInfoDTO requesterInfo, String requesterRegion, MatchRequestDTO request) {
-        return MatchingProfileDTO.builder()
-                .id(requesterInfo.getId())
-                .externalId(requesterInfo.getExternalId())
+    private MatchingProfile createRequesterProfile(UserInfoDTO requesterInfo, String requesterRegion, MatchRequestDTO request) {
+        return MatchingProfile.builder()
+                .userId(requesterInfo.getId())
+                .userExternalId(requesterInfo.getExternalId())
                 .region(requesterRegion)
                 .gender(requesterInfo.getGender())
                 .language(request.language())
@@ -227,9 +253,9 @@ public class MatchingService {
                 .build();
     }
 
-    private void publishSessionEndedEvent(MatchingSessionInfoDTO sessionInfo) {
+    private void publishSessionEndedEvent(MatchingSessionInfo sessionInfo) {
         SessionEndedEvent event = SessionEndedEvent.builder()
-                .sessionUuid(sessionInfo.getSessionId())
+                .sessionUuid(UUID.fromString(sessionInfo.getSessionId()))
                 .startedAt(sessionInfo.getStartedAt())
                 .endedAt(LocalDateTime.now())
                 .build();
@@ -237,18 +263,17 @@ public class MatchingService {
         eventPublisher.publishEvent(event);
     }
 
-    /* --- Redisson ---- */
+    /**
+     * QUERY: 참가자 ID(인덱스)로 조회
+     */
+    public MatchingSessionInfo findSessionByParticipantId(String participantId) {
+        Collection<MatchingSessionInfo> sessions = liveObjectService.find(MatchingSessionInfo.class,
+                Conditions.or(
+                        Conditions.eq("participantAId", participantId),
+                        Conditions.eq("participantBId", participantId)
+                ));
 
-    private RMap<String, MatchingProfileDTO> getUserProfileMap() {
-        return redissonClient.getMap(MatchingConstants.USER_PROFILE_KEY);
-    }
-
-    private RList<String> getWaitingQueue() {
-        return redissonClient.getList(MatchingConstants.WAITING_QUEUE_KEY);
-    }
-
-    private RMap<String, MatchingSessionInfoDTO> getChatSessionMap() {
-        return redissonClient.getMap(MatchingConstants.CHAT_SESSION_KEY);
+        return sessions.stream().findFirst().orElse(null);
     }
 
     /* --- MessagingTemplate ---- */
