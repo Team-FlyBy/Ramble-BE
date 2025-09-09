@@ -32,7 +32,14 @@ public class UserService {
     @Transactional(readOnly = true)
     @Cacheable(value = "user", key = "#userExternalId", unless = "#result == null")
     public UserInfoDTO getUserByExternalId(String userExternalId) {
-        return userRepository.findByExternalId(UUID.fromString(userExternalId))
+        UUID externalId;
+        try {
+            externalId = UUID.fromString(userExternalId);
+        } catch (IllegalArgumentException e) {
+            throw new BaseException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        return userRepository.findByExternalId(externalId)
                 .map(UserInfoDTO::from)
                 .orElseThrow(() -> new BaseException(ErrorCode.USER_NOT_FOUND));
     }
