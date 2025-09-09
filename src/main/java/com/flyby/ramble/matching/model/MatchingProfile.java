@@ -1,17 +1,23 @@
-package com.flyby.ramble.matching.dto;
+package com.flyby.ramble.matching.model;
 
 import com.flyby.ramble.user.model.Gender;
 import lombok.*;
-
-import java.io.Serializable;
+import org.redisson.api.annotation.REntity;
+import org.redisson.api.annotation.RId;
+import org.redisson.api.annotation.RIndex;
 
 @Getter
 @Builder
+@REntity
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class MatchingProfileDTO implements Serializable {
-    private Long id;
-    private String externalId;
+public class MatchingProfile {
+
+    @RId
+    private String userExternalId;
+
+    @RIndex
+    private Long userId;
 
     private String region; // auto-detected
     private Gender gender; // auto-detected
