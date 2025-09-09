@@ -1,6 +1,6 @@
 package com.flyby.ramble.session.service;
 
-import com.flyby.ramble.matching.dto.MatchingProfileDTO;
+import com.flyby.ramble.matching.model.MatchingProfile;
 import com.flyby.ramble.session.model.Session;
 import com.flyby.ramble.session.repository.SessionRepository;
 import com.flyby.ramble.user.model.User;
@@ -24,9 +24,17 @@ public class SessionService {
         return session.getId();
     }
 
-    public Session createSession(MatchingProfileDTO userA, MatchingProfileDTO userB) {
-        User userAEntity = userService.getUserProxyById(userA.getId());
-        User userBEntity = userService.getUserProxyById(userB.getId());
+    public Session createSession(MatchingProfile userA, MatchingProfile userB) {
+        if (userA == null || userB == null) {
+            throw new IllegalArgumentException("매칭 프로필이 누락되었습니다.");
+        }
+
+        if (userA.getUserId().equals(userB.getUserId())) {
+            throw new IllegalArgumentException("같은 사용자끼리는 세션을 생성할 수 없습니다.");
+        }
+
+        User userAEntity = userService.getUserProxyById(userA.getUserId());
+        User userBEntity = userService.getUserProxyById(userB.getUserId());
 
         Session session = Session.builder()
                 .startedAt(LocalDateTime.now())
