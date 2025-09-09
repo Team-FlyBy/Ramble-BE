@@ -15,7 +15,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class UserInfoDTO {
     @JsonIgnore
-    private long id;
+    private Long id;
     private String externalId;
     private String username;
     private String email;
