@@ -189,6 +189,7 @@ public class MatchingService {
                 .sessionId(session.getExternalId().toString())
                 .participantAId(userA.getUserExternalId())
                 .participantBId(userB.getUserExternalId())
+                .startedAt(session.getStartedAt())
                 .build();
         liveSession = liveObjectService.persist(liveSession);
         liveObjectService.asLiveObject(liveSession).expire(Duration.ofMinutes(5)); // 5분 후 자동 만료
