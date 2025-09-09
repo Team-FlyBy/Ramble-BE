@@ -34,7 +34,7 @@ public class GeoIpService {
         }
     }
 
-    @Cacheable(cacheNames = "ipRegion", key = "#ip", unless = "#result == null")
+    @Cacheable(cacheNames = "ipRegion", key = "#ip", unless = "#result == null || #result == 'UNKNOWN'")
     public String getCountryCode(String ip) {
         try {
             InetAddress ipAddress = InetAddress.getByName(ip);
