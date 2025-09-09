@@ -8,6 +8,7 @@ import com.flyby.ramble.user.model.User;
 import com.flyby.ramble.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -56,6 +57,7 @@ public class UserService {
         }
     }
 
+    @CacheEvict(value = "user", key = "#userExternalId")
     public void withdraw(String userExternalId) {
         User user = userRepository.findByExternalId(UUID.fromString(userExternalId))
                 .orElseThrow(() -> new BaseException(ErrorCode.USER_NOT_FOUND));
