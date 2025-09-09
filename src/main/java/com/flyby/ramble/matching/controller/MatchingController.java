@@ -61,7 +61,13 @@ public class MatchingController {
             throw new IllegalArgumentException("세션 속성이 존재하지 않습니다.");
         }
 
-        return sessionAttrs.get("ip").toString();
+        Object ip = sessionAttrs.get("ip");
+
+        if (ip == null) {
+            throw new IllegalArgumentException("세션에 IP 정보가 없습니다.");
+        }
+
+        return ip.toString();
     }
 
 }
