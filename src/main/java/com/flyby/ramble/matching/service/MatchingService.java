@@ -4,8 +4,10 @@ import com.flyby.ramble.matching.constants.MatchingConstants;
 import com.flyby.ramble.matching.dto.MatchRequestDTO;
 import com.flyby.ramble.matching.dto.MatchResultDTO;
 import com.flyby.ramble.matching.dto.SignalMessageDTO;
+import com.flyby.ramble.matching.model.MatchStatus;
 import com.flyby.ramble.matching.model.MatchingProfile;
 import com.flyby.ramble.matching.model.MatchingSessionInfo;
+import com.flyby.ramble.matching.model.RtcRole;
 import com.flyby.ramble.session.event.SessionEndedEvent;
 import com.flyby.ramble.session.model.Session;
 import com.flyby.ramble.session.service.SessionService;
@@ -195,8 +197,8 @@ public class MatchingService {
         liveObjectService.asLiveObject(liveSession).expire(Duration.ofMinutes(5)); // 5분 후 자동 만료
 
         // 양쪽 사용자에게 매칭 성공 알림 전송
-        sendMatchingResult(userA.getUserExternalId(), new MatchResultDTO("SUCCESS", userB.getUserExternalId()));
-        sendMatchingResult(userB.getUserExternalId(), new MatchResultDTO("SUCCESS", userA.getUserExternalId()));
+        sendMatchingResult(userA.getUserExternalId(), new MatchResultDTO(MatchStatus.SUCCESS, RtcRole.OFFER_USER, userB.getUserExternalId()));
+        sendMatchingResult(userB.getUserExternalId(), new MatchResultDTO(MatchStatus.SUCCESS, RtcRole.ANSWER_USER, userA.getUserExternalId()));
     }
 
     private void addToWaitingQueue(MatchingProfile userProfile) {
@@ -208,7 +210,7 @@ public class MatchingService {
         matchingPoolIndex.add(now, userProfile.getUserExternalId());
 
         // 대기 상태 알림 전송
-        sendMatchingResult(userProfile.getUserExternalId(), new MatchResultDTO("WAITING", null));
+        sendMatchingResult(userProfile.getUserExternalId(), new MatchResultDTO(MatchStatus.WAITING, null, null));
     }
 
     /* --- 매칭 취소 ---- */
@@ -218,8 +220,9 @@ public class MatchingService {
 
         if (userProfile != null) {
             liveObjectService.delete(userProfile);
-            matchingPoolIndex.remove(userId);
         }
+
+        matchingPoolIndex.remove(userId);
     }
 
     private void leaveChatSession(String userId) {
@@ -229,7 +232,7 @@ public class MatchingService {
             String partnerId = sessionInfo.getParticipantAId().equals(userId)
                     ? sessionInfo.getParticipantBId()
                     : sessionInfo.getParticipantAId();
-            MatchResultDTO payload = new MatchResultDTO("LEAVE", userId);
+            MatchResultDTO payload = new MatchResultDTO(MatchStatus.LEAVE, null, userId);
 
             // 두 사용자의 세션 제거
             liveObjectService.delete(sessionInfo);
