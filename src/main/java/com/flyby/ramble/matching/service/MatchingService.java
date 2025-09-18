@@ -176,13 +176,6 @@ public class MatchingService {
     }
 
     private void handleMatchSuccess(MatchingProfile userA, MatchingProfile userB) {
-        // 안전 제거 (존재 시)
-        matchingPoolIndex.remove(userB.getUserExternalId());
-        MatchingProfile existing = liveObjectService.get(MatchingProfile.class, userB.getUserExternalId());
-        if (existing != null) {
-            liveObjectService.delete(existing);
-        }
-
         // DB session 저장
         Session session = sessionService.createSession(userA, userB);
 
@@ -193,12 +186,15 @@ public class MatchingService {
                 .participantBId(userB.getUserExternalId())
                 .startedAt(session.getStartedAt())
                 .build();
-        liveSession = liveObjectService.persist(liveSession);
-        liveObjectService.asLiveObject(liveSession).expire(Duration.ofMinutes(5)); // 5분 후 자동 만료
+        liveObjectService.persist(liveSession);
 
         // 양쪽 사용자에게 매칭 성공 알림 전송
         sendMatchingResult(userA.getUserExternalId(), new MatchResultDTO(MatchStatus.SUCCESS, RtcRole.OFFER_USER, userB.getUserExternalId()));
         sendMatchingResult(userB.getUserExternalId(), new MatchResultDTO(MatchStatus.SUCCESS, RtcRole.ANSWER_USER, userA.getUserExternalId()));
+
+        // 제거 (존재 시)
+        matchingPoolIndex.remove(userB.getUserExternalId());
+        liveObjectService.delete(userB);
     }
 
     private void addToWaitingQueue(MatchingProfile userProfile) {
@@ -206,7 +202,8 @@ public class MatchingService {
 
         // Redis 저장 (대기열)
         userProfile.setQueueEntryTime(now);
-        liveObjectService.persist(userProfile);
+        userProfile = liveObjectService.persist(userProfile);
+        liveObjectService.asLiveObject(userProfile).expire(Duration.ofMinutes(5)); // 5분 후 자동 만료
         matchingPoolIndex.add(now, userProfile.getUserExternalId());
 
         // 대기 상태 알림 전송
