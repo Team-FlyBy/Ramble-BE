@@ -38,7 +38,7 @@ encryption:
 
 maxmind:
   geolite:
-    path: file:/app/data/GeoLite2-City.mmdb
+    path: classpath:geo/GeoLite2-City.mmdb
 
 logging:
   level:
