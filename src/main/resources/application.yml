@@ -3,5 +3,5 @@ spring:
     name: ramble
 
   profiles:
-    active: dev
+    active: local
     include: common, swagger, secret, security-http
