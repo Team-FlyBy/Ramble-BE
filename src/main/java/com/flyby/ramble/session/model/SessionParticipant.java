@@ -1,6 +1,7 @@
 package com.flyby.ramble.session.model;
 
 import com.flyby.ramble.common.model.BaseEntity;
+import com.flyby.ramble.user.model.Gender;
 import com.flyby.ramble.user.model.User;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -37,9 +38,20 @@ public class SessionParticipant extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+
+    private String region;
+
+    private String language;
+
+
     @Builder
-    public SessionParticipant(Session session, User user) {
+    public SessionParticipant(Session session, User user, Gender gender, String region, String language) {
         this.session = session;
         this.user = user;
+        this.gender = gender;
+        this.region = region;
+        this.language = language;
     }
 }

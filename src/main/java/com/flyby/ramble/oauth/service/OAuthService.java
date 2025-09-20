@@ -5,10 +5,10 @@ import com.flyby.ramble.auth.service.JwtService;
 import com.flyby.ramble.common.model.DeviceType;
 import com.flyby.ramble.oauth.dto.GooglePersonInfo;
 import com.flyby.ramble.oauth.dto.OAuthIdTokenDTO;
-import com.flyby.ramble.oauth.dto.OAuthRegisterDTO;
 import com.flyby.ramble.oauth.dto.OAuthPkceDTO;
+import com.flyby.ramble.oauth.dto.OAuthRegisterDTO;
 import com.flyby.ramble.oauth.util.OidcTokenParser;
-import com.flyby.ramble.user.model.User;
+import com.flyby.ramble.user.dto.UserInfoDTO;
 import com.flyby.ramble.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,7 +50,7 @@ public class OAuthService {
         // People API를 통한 추가 정보 수집
         GooglePersonInfo personInfo  = googlePeopleApiService.getPersonInfo(accessToken);
         OAuthRegisterDTO registerDTO = oidcTokenParser.parseGoogleIdToken(idToken, personInfo);
-        User user = userService.registerOrLogin(registerDTO);
+        UserInfoDTO user = userService.registerOrLogin(registerDTO);
 
         return jwtService.generateTokens(user, deviceType);
     }
@@ -63,7 +63,7 @@ public class OAuthService {
         String idToken = request.token();
 
         OAuthRegisterDTO registerDTO = oidcTokenParser.parseGoogleIdToken(idToken, new GooglePersonInfo(null, null));
-        User user = userService.registerOrLogin(registerDTO);
+        UserInfoDTO user = userService.registerOrLogin(registerDTO);
 
         return jwtService.generateTokens(user, deviceType);
     }
