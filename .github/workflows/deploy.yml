@@ -36,6 +36,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /home/ubuntu/ramble-be
-            docker pull ${{ secrets.DOCKER_USERNAME }}/ramble-be-dev:latest
+            docker pull ${{ secrets.DOCKER_USERNAME }}/ramble-be:latest
             docker-compose up -d --remove-orphans
             docker system prune -f
