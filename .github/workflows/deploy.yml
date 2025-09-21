@@ -21,7 +21,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/ramble-be:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/ramble-be:dev
 
   dev-deploy:
     needs: dev-build-and-push
@@ -36,6 +36,6 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /home/ubuntu/ramble-be
-            docker pull ${{ secrets.DOCKER_USERNAME }}/ramble-be:latest
+            docker pull ${{ secrets.DOCKER_USERNAME }}/ramble-be:dev
             docker-compose up -d --remove-orphans
             docker system prune -f

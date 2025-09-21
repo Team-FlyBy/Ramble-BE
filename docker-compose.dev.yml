@@ -2,8 +2,8 @@
 services:
   # Spring Boot (BE) 서비스
   app:
-    image: ${DOCKER_USERNAME}/ramble-be:latest
-    container_name: ramble-be
+    image: ${DOCKER_USERNAME}/ramble-be:dev
+    container_name: ramble-be-dev
     ports:
       - "8080:8080"
     networks:
