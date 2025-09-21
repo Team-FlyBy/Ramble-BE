@@ -1,0 +1,110 @@
+services:
+  # Spring Boot (BE) 서비스
+  app:
+    build:
+      context: .
+    image: ramble-be:latest
+    container_name: ramble-be
+    ports:
+      - "8080:8080"
+    networks:
+      - internal
+    volumes:
+      - ${MAXMIND_DB_PATH}:/app/data/GeoLite2-City.mmdb:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      SPRING_PROFILES_ACTIVE: local # dev # prod
+      DB_URL: jdbc:mysql://db:3306/RAMBLE
+      REDIS_HOST: redis
+      STORAGE_ENDPOINT: http://minio:9000
+
+  # MySQL 서비스
+  db:
+    image: mysql:latest
+    container_name: mysql-db
+    ports:
+      - "3306:3306"
+    networks:
+      - internal
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    environment:
+      MYSQL_DATABASE: RAMBLE
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+
+  # Redis 서비스
+  redis:
+    image: redis:latest
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+    networks:
+      - internal
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "PING" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO 서비스
+  minio:
+    image: minio/minio:latest
+    container_name: minio-storage
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - internal
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY}
+
+  # MinIO 버킷 자동 생성 (한 번만 실행)
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - internal
+    env_file: .env
+    entrypoint: >
+      /bin/sh -c '
+        mc alias set local http://minio:9000 ${STORAGE_ACCESS_KEY} ${STORAGE_SECRET_KEY} &&
+        mc mb --ignore-existing local/${STORAGE_BUCKET} &&
+        mc policy set public local/${STORAGE_BUCKET}
+      '
+    restart: "no"
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  db-data:
+  redis-data:
+  minio-data:

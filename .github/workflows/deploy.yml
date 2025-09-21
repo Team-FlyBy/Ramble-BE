@@ -1,0 +1,41 @@
+name: Server Deploy (Dev Server)
+on:
+  push:
+    branches: ["main"] #, "develop"] # develop 브랜치 추가하면 변경
+
+jobs:
+  dev-build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/ramble-be:dev
+
+  dev-deploy:
+    needs: dev-build-and-push
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Deploy to Dev Server
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/ramble-be
+            docker pull ${{ secrets.DOCKER_USERNAME }}/ramble-be:dev
+            docker-compose up -d --remove-orphans
+            docker system prune -f
