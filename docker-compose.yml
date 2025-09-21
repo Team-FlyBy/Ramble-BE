@@ -10,7 +10,7 @@ services:
     networks:
       - internal
     volumes:
-      - ./src/main/resources/geo/GeoLite2-City.mmdb:/app/data/GeoLite2-City.mmdb:ro
+      - ${MAXMIND_DB_PATH}:/app/data/GeoLite2-City.mmdb:ro
     depends_on:
       db:
         condition: service_healthy
