@@ -41,7 +41,7 @@ dependencies {
 	implementation 'com.maxmind.geoip2:geoip2:4.3.0'
 
 	// Swagger-UI
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13'
 
 	// JWT
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
