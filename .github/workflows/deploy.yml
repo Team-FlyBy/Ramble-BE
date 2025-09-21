@@ -29,7 +29,7 @@ jobs:
     environment: dev
     steps:
       - name: Deploy to Dev Server
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
