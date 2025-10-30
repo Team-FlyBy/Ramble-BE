@@ -28,6 +28,7 @@ spring:
 storage:
   endpoint: ${STORAGE_ENDPOINT}
   bucket: ${STORAGE_BUCKET}
+  region: ${STORAGE_REGION}
   credentials:
     access-key: ${STORAGE_ACCESS_KEY}
     secret-key: ${STORAGE_SECRET_KEY}

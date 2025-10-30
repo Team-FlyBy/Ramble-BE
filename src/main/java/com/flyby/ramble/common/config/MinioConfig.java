@@ -18,6 +18,7 @@ public class MinioConfig {
     public MinioClient minioClient() {
         return MinioClient.builder()
                 .endpoint(storageProperties.getEndpoint())
+                .region(storageProperties.getRegion())
                 .credentials(storageProperties.getCredentials().getAccessKey(), storageProperties.getCredentials().getSecretKey())
                 .build();
     }
