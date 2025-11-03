@@ -10,6 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class StorageProperties {
     private final String endpoint;
     private final String bucket;
+    private final String region;
     private final Credentials credentials;
 
     @Getter
