@@ -7,10 +7,10 @@ on:
 jobs:
   claude-pr-review:
     if: |
-      github.event.pull_request.user.login == 'marso34' ||
-      github.event.pull_request.user.login == 'nativegold' ||
-      github.event.pull_request.user.login == 'ooANAoo' ||
-      github.event.pull_request.user.login == 'Batwan01'
+      github.event.pull_request.user.type != 'Bot' && (
+        github.event.pull_request.author_association == 'OWNER' ||
+        github.event.pull_request.author_association == 'MEMBER'
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: read
