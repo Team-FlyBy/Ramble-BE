@@ -39,7 +39,7 @@ public class GooglePeopleApiService {
         Optional<String> personFields = buildPersonFields(scopes);
 
         if (personFields.isEmpty()) {
-            return new GooglePersonInfo(null, null);
+            return new GooglePersonInfo(Gender.UNKNOWN, null);
         }
 
         String url = UriComponentsBuilder.fromUriString(PEOPLE_API_URL)
