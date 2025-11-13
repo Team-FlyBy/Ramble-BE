@@ -63,7 +63,7 @@ public class GooglePeopleApiService {
             log.error("Failed to fetch person info from Google People API", e);
         }
 
-        return new GooglePersonInfo(null, null);
+        return new GooglePersonInfo(Gender.UNKNOWN, null);
     }
 
     private boolean hasGenderScope(Set<String> scopes)   {
