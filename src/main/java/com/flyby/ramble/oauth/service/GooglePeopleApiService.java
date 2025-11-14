@@ -39,7 +39,7 @@ public class GooglePeopleApiService {
         Optional<String> personFields = buildPersonFields(scopes);
 
         if (personFields.isEmpty()) {
-            return new GooglePersonInfo(null, null);
+            return new GooglePersonInfo(Gender.UNKNOWN, null);
         }
 
         String url = UriComponentsBuilder.fromUriString(PEOPLE_API_URL)
@@ -63,7 +63,7 @@ public class GooglePeopleApiService {
             log.error("Failed to fetch person info from Google People API", e);
         }
 
-        return new GooglePersonInfo(null, null);
+        return new GooglePersonInfo(Gender.UNKNOWN, null);
     }
 
     private boolean hasGenderScope(Set<String> scopes)   {
@@ -91,7 +91,7 @@ public class GooglePeopleApiService {
             return new GooglePersonInfo(Gender.from(gender), birthDate);
         } catch (Exception e) {
             log.error("Failed to parse person info response", e);
-            return new GooglePersonInfo(null, null);
+            return new GooglePersonInfo(Gender.UNKNOWN, null);
         }
     }
 
