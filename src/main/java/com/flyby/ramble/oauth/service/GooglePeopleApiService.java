@@ -91,7 +91,7 @@ public class GooglePeopleApiService {
             return new GooglePersonInfo(Gender.from(gender), birthDate);
         } catch (Exception e) {
             log.error("Failed to parse person info response", e);
-            return new GooglePersonInfo(null, null);
+            return new GooglePersonInfo(Gender.UNKNOWN, null);
         }
     }
 
