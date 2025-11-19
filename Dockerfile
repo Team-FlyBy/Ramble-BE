@@ -6,20 +6,28 @@ WORKDIR /workspace/app
 COPY build.gradle settings.gradle gradle.properties ./
 COPY gradle ./gradle
 COPY gradlew ./
+
+ RUN ./gradlew dependencies --no-daemon
+
 COPY src ./src
 
-RUN ./gradlew build --no-daemon -x test
+RUN ./gradlew bootJar --no-daemon
+
+RUN java -Djarmode=layertools -jar build/libs/*.jar extract
 
 # Runner Stage
 FROM eclipse-temurin:17-jre
 
 WORKDIR /app
+
 RUN groupadd -r spring && useradd --no-create-home -r -s /bin/false -g spring springuser
 
-COPY --from=builder /workspace/app/build/libs/*.jar app.jar
-
-RUN chown springuser:spring /app/app.jar
+# 계층형 JAR의 각 레이어를 별도로 복사
+COPY --from=builder --chown=springuser:spring /workspace/app/dependencies/ ./
+COPY --from=builder --chown=springuser:spring /workspace/app/spring-boot-loader/ ./
+COPY --from=builder --chown=springuser:spring /workspace/app/snapshot-dependencies/ ./
+COPY --from=builder --chown=springuser:spring /workspace/app/application/ ./
 
 USER springuser
 
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "org.springframework.boot.loader.launch.JarLauncher"]
