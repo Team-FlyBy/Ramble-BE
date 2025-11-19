@@ -1,0 +1,25 @@
+build/
+.gradle/
+.env
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# 기타
+.DS_Store
+Thumbs.db
+*.md
