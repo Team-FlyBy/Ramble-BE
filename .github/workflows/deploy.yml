@@ -10,17 +10,20 @@ on:
       - 'Dockerfile'
 
 concurrency:
-  group: 'deploy-dev'  # 브랜치별 독립적 실행 # develop 브랜치 추가하면 'deploy-${{ github.ref_name }}'로 변경
+  group: 'deploy-${{ github.ref_name }}' # 브랜치별 독립적 실행
   cancel-in-progress: true
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-
+  APP_ENV: dev # ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+               # develop 브랜치 추가하면 변경, 지금은 dev로 고정
 jobs:
   build-and-push:
-    name: Build and Push Docker Image (dev) # develop 브랜치 추가하면 'Build and ... (${{ github.ref_name }})'로 변경
+    name: Build and Push Docker Image (${{ env.APP_ENV }})
     runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.meta.outputs.version }}
     permissions:
       contents: read
       packages: write
@@ -48,11 +51,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=dev
-#            develop 추가 후 변경
-#            type=raw,value=latest,enable=${{ github.ref_name == 'main' }}
-#            type=raw,value=dev,enable=${{ github.ref_name == 'develop' }}
             type=sha,prefix=,format=short
+            type=raw,value=latest,enable=${{ env.APP_ENV == 'prod' }}
+            type=raw,value=dev,enable=${{ env.APP_ENV == 'dev' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -67,13 +68,13 @@ jobs:
           provenance: false
 
   deploy-to-ec2:
-    name: Deploy to EC2 (dev) # develop 브랜치 추가하면 'Deploy to EC2 (${{ github.ref_name }})'로 변경
+    name: Deploy to EC2 (${{ env.APP_ENV }})
     needs: build-and-push
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
-    environment: dev # ${{ github.ref_name == 'main' && 'prod' || 'dev' }} # develop 브랜치 추가하면 변경
+    environment: ${{ env.APP_ENV }}
 
     steps:
       - name: Configure AWS credentials
@@ -85,16 +86,16 @@ jobs:
       - name: Send SSM Run Command
         run: |
           IMAGE=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
-          TAG="dev"
+          TAG="${{ needs.build-and-push.outputs.image_tag }}"
 
           aws ssm send-command \
               --instance-ids ${{ secrets.AWS_INSTANCE_ID }} \
               --document-name "AWS-RunShellScript" \
-              --comment "Deploy Ramble BE (${{ github.ref_name }})" \
+              --comment "Deploy Ramble BE (${{ env.APP_ENV }})" \
               --parameters commands=[
                 "cd /home/ubuntu/ramble-be",
                 "docker pull $IMAGE:$TAG",
-                "docker-compose up -d --remove-orphans",
-                "docker system prune -f"
+                "DOCKER_IMAGE=$IMAGE IMAGE_TAG=$TAG docker-compose up -d --remove-orphans",
+                "ocker system prune -fd"
               ] \
               --output text
