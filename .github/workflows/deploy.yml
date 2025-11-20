@@ -84,7 +84,6 @@ jobs:
         run: |
           IMAGE=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
           TAG="dev"
-#          develop 브랜치 추가하면 "${{ github.ref_name == 'main' && 'latest' || 'dev' }}"
 
           COMMANDS="[
                 \"cd /home/ubuntu/ramble-be\",
