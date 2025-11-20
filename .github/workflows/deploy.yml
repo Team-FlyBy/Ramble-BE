@@ -16,11 +16,10 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  APP_ENV: dev # ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
-               # develop 브랜치 추가하면 변경, 지금은 dev로 고정
+
 jobs:
   build-and-push:
-    name: Build and Push Docker Image (${{ env.APP_ENV }})
+    name: Build and Push Docker Image (dev) # develop 브랜치 추가하면 ${{ github.ref_name }}로 변경
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -66,13 +65,13 @@ jobs:
           provenance: false
 
   deploy-to-ec2:
-    name: Deploy to EC2 (${{ env.APP_ENV }})
+    name: Deploy to EC2 (dev) # develop 브랜치 추가하면 ${{ github.ref_name }}로 변경
     needs: build-and-push
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
-    environment: ${{ env.APP_ENV }}
+    environment: dev # ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
 
     steps:
       - name: Configure AWS credentials
@@ -84,7 +83,8 @@ jobs:
       - name: Send SSM Run Command #TODO: 추후 sha 태그로 수정
         run: |
           IMAGE=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
-          TAG="${{ env.APP_ENV == 'prod' && 'latest' || 'dev' }}"
+          TAG="dev"
+#          develop 브랜치 추가하면 "${{ github.ref_name == 'main' && 'latest' || 'dev' }}"
 
           COMMANDS="[
                 \"cd /home/ubuntu/ramble-be\",
