@@ -22,8 +22,6 @@ jobs:
   build-and-push:
     name: Build and Push Docker Image (${{ env.APP_ENV }})
     runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.meta.outputs.version }}
     permissions:
       contents: read
       packages: write
@@ -83,19 +81,21 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_GHACTIONS_ROLE }}
 
-      - name: Send SSM Run Command
+      - name: Send SSM Run Command #TODO: 추후 sha 태그로 수정
         run: |
           IMAGE=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
-          TAG="${{ needs.build-and-push.outputs.image_tag }}"
+          TAG="${{ env.APP_ENV == 'prod' && 'latest' || 'dev' }}"
+
+          COMMANDS="[
+                \"cd /home/ubuntu/ramble-be\",
+                \"docker pull $IMAGE:$TAG\",
+                \"docker-compose up -d --remove-orphans\",
+                \"docker image prune -f\"
+          ]"
 
           aws ssm send-command \
               --instance-ids ${{ secrets.AWS_INSTANCE_ID }} \
               --document-name "AWS-RunShellScript" \
               --comment "Deploy Ramble BE (${{ env.APP_ENV }})" \
-              --parameters commands=[
-                "cd /home/ubuntu/ramble-be",
-                "docker pull $IMAGE:$TAG",
-                "DOCKER_IMAGE=$IMAGE IMAGE_TAG=$TAG docker-compose up -d --remove-orphans",
-                "ocker system prune -fd"
-              ] \
+              --parameters "commands=$COMMANDS" \
               --output text
