@@ -88,8 +88,8 @@ jobs:
 
           COMMANDS="[
                 \"cd /home/ubuntu/ramble-be\",
-                \"sudo -u docker pull $IMAGE:$TAG\",
-                \"sudo -u docker-compose up -d --remove-orphans\",
+                \"sudo -u ubuntu docker pull $IMAGE:$TAG\",
+                \"sudo -u ubuntu docker-compose up -d --remove-orphans\",
                 \"docker image prune -f\"
           ]"
 
