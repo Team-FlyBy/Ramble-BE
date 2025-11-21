@@ -49,8 +49,9 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,prefix=,format=short
-            type=raw,value=latest,enable=${{ env.APP_ENV == 'prod' }}
-            type=raw,value=dev,enable=${{ env.APP_ENV == 'dev' }}
+            type=raw,value=dev
+#            type=raw,value=latest,enable=${{ github.ref_name == 'main' }}
+#            type=raw,value=dev,enable=${{ github.ref_name == 'develop' }} # develop 브랜치 추가하면 활성화
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -87,14 +88,14 @@ jobs:
 
           COMMANDS="[
                 \"cd /home/ubuntu/ramble-be\",
-                \"docker pull $IMAGE:$TAG\",
-                \"docker-compose up -d --remove-orphans\",
+                \"sudo -u docker pull $IMAGE:$TAG\",
+                \"sudo -u docker-compose up -d --remove-orphans\",
                 \"docker image prune -f\"
           ]"
 
           aws ssm send-command \
               --instance-ids ${{ secrets.AWS_INSTANCE_ID }} \
               --document-name "AWS-RunShellScript" \
-              --comment "Deploy Ramble BE (${{ env.APP_ENV }})" \
+              --comment "Deploy Ramble BE (dev)" \
               --parameters "commands=$COMMANDS" \
               --output text
