@@ -1,41 +1,168 @@
-name: Server Deploy (Dev Server)
+name: Server Deploy
 on:
   push:
     branches: ["main"] #, "develop"] # develop 브랜치 추가하면 변경
+    paths:
+      - '.github/workflows/deploy.yml'
+      - 'src/**'
+      - 'build.gradle'
+      - 'gradle.properties'
+      - 'Dockerfile'
+
+concurrency:
+  group: 'deploy-${{ github.ref_name }}' # 브랜치별 독립적 실행
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  dev-build-and-push:
+  build-and-push:
+    name: Build and Push Docker Image (dev) # develop 브랜치 추가하면 ${{ github.ref_name }}로 변경
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Login to Docker Hub
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to registry ${{ env.REGISTRY }}
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=dev
+#            type=raw,value=latest,enable=${{ github.ref_name == 'main' }}
+#            type=raw,value=dev,enable=${{ github.ref_name == 'develop' }} # develop 브랜치 추가하면 활성화
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/ramble-be:dev
+          platforms: linux/amd64,linux/arm64 # x86과 arm64 동시 빌드
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
 
-  dev-deploy:
-    needs: dev-build-and-push
+  deploy-to-ec2:
+    name: Deploy to EC2 (dev) # develop 브랜치 추가하면 ${{ github.ref_name }}로 변경
+    needs: build-and-push
     runs-on: ubuntu-latest
-    environment: dev
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    environment: dev # ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+
     steps:
-      - name: Deploy to Dev Server
-        uses: appleboy/ssh-action@v0.1.10
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /home/ubuntu/ramble-be
-            docker pull ${{ secrets.DOCKER_USERNAME }}/ramble-be:dev
-            docker-compose up -d --remove-orphans
-            docker system prune -f
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_GHACTIONS_ROLE }}
+
+      - name: Send SSM Run Command #TODO: 추후 sha 태그로 수정
+        id: send-ssm-command
+        run: |
+          IMAGE=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          TAG="dev"
+
+          COMMANDS="[
+                \"cd /home/ubuntu/ramble-be\",
+                \"sudo -u ubuntu docker pull $IMAGE:$TAG\",
+                \"sudo -u ubuntu docker-compose up -d --remove-orphans\",
+                \"sudo -u ubuntu docker image prune -f\"
+          ]"
+
+          COMMAND_ID=$(aws ssm send-command \
+              --instance-ids ${{ secrets.AWS_INSTANCE_ID }} \
+              --document-name "AWS-RunShellScript" \
+              --comment "Deploy Ramble BE (dev)" \
+              --timeout-seconds 480 \ 
+              --parameters "commands=$COMMANDS" \
+              --output text \
+              --query 'Command.CommandId')
+          
+          echo "command_id=$COMMAND_ID" >> $GITHUB_OUTPUT
+
+      - name: Wait for Command Completion
+        run: |
+          aws ssm wait command-executed \
+              --command-id ${{ steps.send-ssm-command.outputs.command_id }} \
+              --instance-id ${{ secrets.AWS_INSTANCE_ID }}
+
+      - name: Check Command Result
+        if: always()
+        run: |          
+          set +e
+          
+          RESULT=$(aws ssm get-command-invocation \
+              --command-id ${{ steps.send-ssm-command.outputs.command_id }} \
+              --instance-id ${{ secrets.AWS_INSTANCE_ID }} \
+              --query '{Status:Status, StdOut:StandardOutputContent, StdErr:StandardErrorContent}' \
+              --output json)
+      
+          STATUS=$(echo "$RESULT" | jq -r '.Status')
+          STDOUT=$(echo "$RESULT" | jq -r '.StdOut')
+          STDERR=$(echo "$RESULT" | jq -r '.StdErr')
+          
+          MAX_LEN=5000
+          [ ${#STDOUT} -gt $MAX_LEN ] && STDOUT="${STDOUT:0:$MAX_LEN}\n\n... (출력 생략, 전체는 EC2에서 확인)"
+          [ ${#STDERR} -gt $MAX_LEN ] && STDERR="${STDERR:0:$MAX_LEN}\n\n... (출력 생략, 전체는 EC2에서 확인)"
+        
+          declare -A ICONS=(["Success"]="🟢" ["Failed"]="🔴" ["Cancelled"]="🔴" ["TimedOut"]="🟠")
+          STATUS_BADGE="${ICONS[$STATUS]:-🟡} $STATUS"
+          
+          echo "배포 결과: $STATUS"
+          
+          echo "## SSM Command Execution Result (Dev)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "| 항목 | 내용 |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Status** | $STATUS_BADGE |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Command ID** | \`${{ steps.send-ssm-command.outputs.command_id }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Instance ID** | \`${{ secrets.AWS_INSTANCE_ID }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Triggered By** | \`@${{ github.actor }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit SHA** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Execution Time** | $(date '+%Y-%m-%d %H:%M:%S %Z') |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 📤 Standard Output" >> $GITHUB_STEP_SUMMARY
+          
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${STDOUT:-_No output_}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+    
+          echo "### ⚠️ Standard Error" >> $GITHUB_STEP_SUMMARY
+          
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${STDERR:-_No errors_}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$STATUS" != "Success" ]; then
+            exit 1
+          fi
