@@ -69,6 +69,7 @@ jobs:
     name: Deploy to EC2 (dev) # develop 브랜치 추가하면 ${{ github.ref_name }}로 변경
     needs: build-and-push
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
@@ -82,6 +83,7 @@ jobs:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_GHACTIONS_ROLE }}
 
       - name: Send SSM Run Command #TODO: 추후 sha 태그로 수정
+        id: send-ssm-command
         run: |
           IMAGE=$(echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
           TAG="dev"
@@ -90,12 +92,77 @@ jobs:
                 \"cd /home/ubuntu/ramble-be\",
                 \"sudo -u ubuntu docker pull $IMAGE:$TAG\",
                 \"sudo -u ubuntu docker-compose up -d --remove-orphans\",
-                \"docker image prune -f\"
+                \"sudo -u ubuntu docker image prune -f\"
           ]"
 
-          aws ssm send-command \
+          COMMAND_ID=$(aws ssm send-command \
               --instance-ids ${{ secrets.AWS_INSTANCE_ID }} \
               --document-name "AWS-RunShellScript" \
               --comment "Deploy Ramble BE (dev)" \
+              --timeout-seconds 480 \ 
               --parameters "commands=$COMMANDS" \
-              --output text
+              --output text \
+              --query 'Command.CommandId')
+          
+          echo "command_id=$COMMAND_ID" >> $GITHUB_OUTPUT
+
+      - name: Wait for Command Completion
+        run: |
+          aws ssm wait command-executed \
+              --command-id ${{ steps.send-ssm-command.outputs.command_id }} \
+              --instance-id ${{ secrets.AWS_INSTANCE_ID }}
+
+      - name: Check Command Result
+        if: always()
+        run: |          
+          set +e
+          
+          RESULT=$(aws ssm get-command-invocation \
+              --command-id ${{ steps.send-ssm-command.outputs.command_id }} \
+              --instance-id ${{ secrets.AWS_INSTANCE_ID }} \
+              --query '{Status:Status, StdOut:StandardOutputContent, StdErr:StandardErrorContent}' \
+              --output json)
+      
+          STATUS=$(echo "$RESULT" | jq -r '.Status')
+          STDOUT=$(echo "$RESULT" | jq -r '.StdOut')
+          STDERR=$(echo "$RESULT" | jq -r '.StdErr')
+          
+          MAX_LEN=5000
+          [ ${#STDOUT} -gt $MAX_LEN ] && STDOUT="${STDOUT:0:$MAX_LEN}\n\n... (출력 생략, 전체는 EC2에서 확인)"
+          [ ${#STDERR} -gt $MAX_LEN ] && STDERR="${STDERR:0:$MAX_LEN}\n\n... (출력 생략, 전체는 EC2에서 확인)"
+        
+          declare -A ICONS=(["Success"]="🟢" ["Failed"]="🔴" ["Cancelled"]="🔴" ["TimedOut"]="🟠")
+          STATUS_BADGE="${ICONS[$STATUS]:-🟡} $STATUS"
+          
+          echo "배포 결과: $STATUS"
+          
+          echo "## SSM Command Execution Result (Dev)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "| 항목 | 내용 |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Status** | $STATUS_BADGE |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Command ID** | \`${{ steps.send-ssm-command.outputs.command_id }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Instance ID** | \`${{ secrets.AWS_INSTANCE_ID }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Triggered By** | \`@${{ github.actor }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit SHA** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Execution Time** | $(date '+%Y-%m-%d %H:%M:%S %Z') |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 📤 Standard Output" >> $GITHUB_STEP_SUMMARY
+          
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${STDOUT:-_No output_}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+    
+          echo "### ⚠️ Standard Error" >> $GITHUB_STEP_SUMMARY
+          
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${STDERR:-_No errors_}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$STATUS" != "Success" ]; then
+            exit 1
+          fi
