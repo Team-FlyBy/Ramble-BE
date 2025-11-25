@@ -99,7 +99,7 @@ jobs:
               --instance-ids ${{ secrets.AWS_INSTANCE_ID }} \
               --document-name "AWS-RunShellScript" \
               --comment "Deploy Ramble BE (dev)" \
-              --timeout-seconds 480 \ 
+              --timeout-seconds 480 \
               --parameters "commands=$COMMANDS" \
               --output text \
               --query 'Command.CommandId')
@@ -114,7 +114,7 @@ jobs:
 
       - name: Check Command Result
         if: always()
-        run: |          
+        run: |
           set +e
           
           RESULT=$(aws ssm get-command-invocation \
