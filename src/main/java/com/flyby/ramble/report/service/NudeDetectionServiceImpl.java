@@ -23,7 +23,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.UUID;
-import java.util.zip.GZIPOutputStream;
 
 import static com.flyby.ramble.report.constants.Constants.*;
 
@@ -37,7 +36,7 @@ public class NudeDetectionServiceImpl implements NudeDetectionService {
 
     @Override
     public void requestDetection(DetectNudeCommandDTO commandDTO) {
-        EncryptedSnapshotUploadResultDTO resultDTO = gzipEncryptAndUploadSnapshot(commandDTO.getPeerVideoSnapshot());
+        EncryptedSnapshotUploadResultDTO resultDTO = encryptAndUploadSnapshot(commandDTO.getPeerVideoSnapshot());
 
         messageProducer.send(
                 MESSAGE_TOPIC_NUDE_DETECTION_REQUEST,
@@ -51,7 +50,7 @@ public class NudeDetectionServiceImpl implements NudeDetectionService {
 
     @Override
     public void requestAutoDetection(AutoNudeDetectionCommandDTO commandDTO) {
-        EncryptedSnapshotUploadResultDTO resultDTO = gzipEncryptAndUploadSnapshot(commandDTO.getPeerVideoSnapshot());
+        EncryptedSnapshotUploadResultDTO resultDTO = encryptAndUploadSnapshot(commandDTO.getPeerVideoSnapshot());
 
         messageProducer.send(
                 MESSAGE_TOPIC_AUTO_NUDE_DETECTION_REQUEST,
@@ -63,7 +62,7 @@ public class NudeDetectionServiceImpl implements NudeDetectionService {
         );
     }
 
-    private EncryptedSnapshotUploadResultDTO gzipEncryptAndUploadSnapshot(MultipartFile videoSnapshot) {
+    private EncryptedSnapshotUploadResultDTO encryptAndUploadSnapshot(MultipartFile videoSnapshot) {
         File tempFile = null;
 
         try {
@@ -78,24 +77,23 @@ public class NudeDetectionServiceImpl implements NudeDetectionService {
             LocalDateTime now = LocalDateTime.now();
 
             String urlPrefix = STORAGE_REPORT_DIR + "/" + now.format(DateTimeFormatter.BASIC_ISO_DATE);
-            String fileUrl = urlPrefix + "/" + uuid + ".enc.gz";
+            String fileUrl = urlPrefix + "/" + uuid + ".jpg.enc";
             String keyUrl = urlPrefix + "/" + uuid + ".key.enc";
 
             // 임시 파일 생성
-            tempFile = File.createTempFile("snapshot-", ".enc.gz");
+            tempFile = File.createTempFile("snapshot-", ".jpg.enc");
 
             try (
                     InputStream inputStream = videoSnapshot.getInputStream();
                     FileOutputStream fos = new FileOutputStream(tempFile);
                     CipherOutputStream cipherOut = new CipherOutputStream(fos, aesCipher);
-                    GZIPOutputStream gzipOut = new GZIPOutputStream(cipherOut)
             ) {
                 byte[] buffer = new byte[8192];
                 int bytesRead;
                 while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    gzipOut.write(buffer, 0, bytesRead);
+                    cipherOut.write(buffer, 0, bytesRead);
                 }
-                gzipOut.finish();
+                cipherOut.flush();
             }
 
             long contentLength = tempFile.length();
