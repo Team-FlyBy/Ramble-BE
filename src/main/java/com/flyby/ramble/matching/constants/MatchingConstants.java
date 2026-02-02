@@ -23,7 +23,7 @@ public final class MatchingConstants {
     public static final String SESSION_USER = "match:session:user"; // userId → sessionId 매핑
 
     //
-    public static final int QUEUE_BATCH_SIZE = 500;
+    public static final int QUEUE_BATCH_SIZE = 1000;
     public static final int QUEUE_TTL = 5;
 
 }
