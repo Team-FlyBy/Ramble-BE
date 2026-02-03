@@ -38,15 +38,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("QueueManager 테스트 (실제 Redis)")
 @Testcontainers
 @ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = {RedissonConfig.class})
+@ContextConfiguration(classes = {RedissonConfig.class, QueueManager.class})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class QueueManagerTest {
 
     @Container
     @ServiceConnection(name = "redis")
     static final GenericContainer<?> redis = new GenericContainer<>("redis:7.0-alpine")
-                    .withExposedPorts(6379)
-                    .withReuse(true);
+            .withExposedPorts(6379)
+            .withReuse(true);
 
     @DynamicPropertySource
     static void redisProperties(DynamicPropertyRegistry registry) {
@@ -54,26 +54,15 @@ class QueueManagerTest {
         registry.add("spring.data.redis.port", redis::getFirstMappedPort);
     }
 
-    private static RedissonClient redissonClient;
+    @Autowired
+    private RedissonClient redissonClient;
 
-    private static QueueManager queueManager;
+    @Autowired
+    private QueueManager queueManager;
 
     private MatchingProfile testProfile1;
     private MatchingProfile testProfile2;
     private MatchingProfile testProfile3;
-
-    @BeforeAll
-    static void setUpAll(@Autowired RedissonClient client) {
-        redissonClient = client;
-        queueManager = new QueueManager(redissonClient);
-    }
-
-    @AfterAll
-    static void tearDownAll() {
-        if (redissonClient != null && !redissonClient.isShutdown()) {
-            redissonClient.shutdown();
-        }
-    }
 
     @BeforeEach
     void setUp() {
