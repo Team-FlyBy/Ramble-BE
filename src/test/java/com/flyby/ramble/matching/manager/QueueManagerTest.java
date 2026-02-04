@@ -384,7 +384,7 @@ class QueueManagerTest {
         assertThat(queues).isNotEmpty().hasSize(Math.min(userCount, 390)); // 390은 최대 조합 수
         assertThat(queues.values())
                 .flatExtracting(list -> list) // 각 리스트의 원소들을 하나로 합침
-                .hasSize(Math.min(userCount, MatchingConstants.QUEUE_BATCH_SIZE)) // queueManager의 poll 최대 개수 (QUEUE_BATCH_SIZE와 동일하지는 않음)
+                .hasSize(Math.min(userCount, MatchingConstants.REDIS_BATCH_SIZE)) // queueManager의 poll 최대 개수 (REDIS_BATCH_SIZE와 동일하지는 않음)
                 .doesNotHaveDuplicates();
 
         // when (2) - 일괄 삭제
@@ -426,8 +426,8 @@ class QueueManagerTest {
         Map<String, List<String>> groups = queueManager.poll();
         List<String> queue = groups.get(queueKey);
 
-        // queueManager의 poll 최대 개수 (엄밀히는 QUEUE_BATCH_SIZE와 동일하지는 않음, calculateProportionalSize 때문)
-        assertThat(queue).hasSize(Math.min(threadCount, MatchingConstants.QUEUE_BATCH_SIZE));
+        // queueManager의 poll 최대 개수 (엄밀히는 REDIS_BATCH_SIZE와 동일하지는 않음, calculateProportionalSize 때문)
+        assertThat(queue).hasSize(Math.min(threadCount, MatchingConstants.REDIS_BATCH_SIZE));
     }
 
     @DisplayName("[동시성] 멀티스레드 enqueue - 다른 큐")
@@ -462,8 +462,8 @@ class QueueManagerTest {
         // then - 모든 사용자가 정상적으로 추가되었는지 확인
         Map<String, List<String>> queues = queueManager.poll();
 
-        // queueManager의 poll 최대 개수 (엄밀히는 QUEUE_BATCH_SIZE와 동일하지는 않음, calculateProportionalSize 때문)
-        int minExpectedSize = Math.min(threadCount, MatchingConstants.QUEUE_BATCH_SIZE) / 390; // (390은 최대 조합 수)
+        // queueManager의 poll 최대 개수 (엄밀히는 REDIS_BATCH_SIZE와 동일하지는 않음, calculateProportionalSize 때문)
+        int minExpectedSize = Math.min(threadCount, MatchingConstants.REDIS_BATCH_SIZE) / 390; // (390은 최대 조합 수)
         int maxExpectedSize = minExpectedSize + 1;
 
         assertThat(queues).isNotEmpty().hasSize(Math.min(threadCount, 390)); // 390은 최대 조합 수

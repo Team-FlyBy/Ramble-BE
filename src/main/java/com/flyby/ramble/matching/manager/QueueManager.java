@@ -347,13 +347,13 @@ public class QueueManager {
     }
 
     private int calculateProportionalSize(int value, long totalSize) {
-        if (totalSize <= MatchingConstants.QUEUE_BATCH_SIZE) {
+        if (totalSize <= MatchingConstants.REDIS_BATCH_SIZE) {
             // Case A: 전체 데이터가 제한보다 적으면 있는 그대로
             return value;
         } else {
             // Case B: 전체 데이터가 제한보다 많으면 비례해서 -> (현재 큐크기 / 전체 크기) * 최대제한
             double ratio = (double) value / totalSize;
-            return (int) Math.ceil(ratio * MatchingConstants.QUEUE_BATCH_SIZE);
+            return (int) Math.ceil(ratio * MatchingConstants.REDIS_BATCH_SIZE);
         }
     }
 
