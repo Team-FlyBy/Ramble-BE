@@ -59,8 +59,8 @@ public class SessionBatchRepository {
 
     private void insertSessions(List<SessionBatchData> sessions) {
         String sql = """
-            INSERT INTO sessions (external_id, started_at, created_at, updated_at)
-            VALUES (:external_id, :started_at, :created_at, :updated_at)
+            INSERT INTO sessions (external_id, started_at, created_at, modified_at)
+            VALUES (:external_id, :started_at, :created_at, :modified_at)
             """;
 
         LocalDateTime now = LocalDateTime.now();
@@ -70,7 +70,7 @@ public class SessionBatchRepository {
                         .addValue("external_id", UuidUtil.uuidToBytes(session.externalId()))
                         .addValue("started_at", session.startedAt())
                         .addValue("created_at", now)
-                        .addValue("updated_at", now))
+                        .addValue("modified_at", now))
                 .toArray(SqlParameterSource[]::new);
 
         jdbcTemplate.batchUpdate(sql, batch);
@@ -78,8 +78,8 @@ public class SessionBatchRepository {
 
     private void insertSessionParticipants(List<ParticipantBatchData> participants) {
         String sql = """
-                INSERT INTO session_participants (session_id, user_id, gender, region, language, created_at, updated_at)
-                VALUES (:session_id, :user_id, :gender, :region, :language, :created_at, :updated_at)
+                INSERT INTO session_participants (session_id, user_id, gender, region, language, created_at, modified_at)
+                VALUES (:session_id, :user_id, :gender, :region, :language, :created_at, :modified_at)
                 """;
 
         LocalDateTime now = LocalDateTime.now();
@@ -88,11 +88,11 @@ public class SessionBatchRepository {
                 .map(participant -> new MapSqlParameterSource()
                         .addValue("session_id", participant.sessionId())
                         .addValue("user_id", participant.userId())
-                        .addValue("gender", participant.gender())
-                        .addValue("region", participant.region())
-                        .addValue("language", participant.language())
+                        .addValue("gender", participant.gender().name())
+                        .addValue("region", participant.region().name())
+                        .addValue("language", participant.language().name())
                         .addValue("created_at", now)
-                        .addValue("updated_at", now))
+                        .addValue("modified_at", now))
                 .toArray(SqlParameterSource[]::new);
 
         jdbcTemplate.batchUpdate(sql, batch);
