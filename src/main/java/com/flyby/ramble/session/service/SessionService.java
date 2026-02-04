@@ -6,6 +6,10 @@ import com.flyby.ramble.session.repository.SessionBatchRepository;
 import com.flyby.ramble.session.repository.SessionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -37,19 +41,27 @@ public class SessionService {
     }
 
     @Async
+    @Retryable(
+            retryFor = {DataAccessException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CompletableFuture<Void> saveSessionsAsync(List<SessionData> list) {
         if (list == null || list.isEmpty()) {
             return CompletableFuture.completedFuture(null);
         }
 
-        try {
-            sessionBatchRepository.saveSessionsWithParticipants(list);
-            return CompletableFuture.completedFuture(null);
-        } catch (Exception e) {
-            log.error("비동기 세션 저장 실패: {} 건", list.size(), e);
-            return CompletableFuture.failedFuture(e);
-        }
+        sessionBatchRepository.saveSessionsWithParticipants(list);
+        log.debug("세션 저장 완료: {} 건", list.size());
+        return CompletableFuture.completedFuture(null);
+    }
+
+    @Recover
+    public CompletableFuture<Void> recoverSaveSessionsAsync(DataAccessException e, List<SessionData> list) {
+        log.error("세션 저장 최종 실패 (재시도 소진): {} 건", list.size(), e);
+        // TODO: 추후 실패 처리 로직 추가
+        return CompletableFuture.completedFuture(null);
     }
 
 }
