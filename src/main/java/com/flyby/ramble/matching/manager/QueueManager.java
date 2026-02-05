@@ -328,7 +328,7 @@ public class QueueManager {
 
                             return values.stream()
                                     .map(mapper)
-                                    .collect(Collectors.toCollection(ArrayList::new));
+                                    .collect(Collectors.toCollection(LinkedList::new));
                         },
                         (a, b) -> a,
                         LinkedHashMap::new
