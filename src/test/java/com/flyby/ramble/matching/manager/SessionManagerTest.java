@@ -1,7 +1,8 @@
 package com.flyby.ramble.matching.manager;
 
-import com.flyby.ramble.common.config.RedissonConfig;
 import com.flyby.ramble.common.model.OAuthProvider;
+import com.flyby.ramble.matching.MockEventPublisherConfig;
+import com.flyby.ramble.matching.RedisTestBase;
 import com.flyby.ramble.matching.constants.MatchingConstants;
 import com.flyby.ramble.matching.model.Language;
 import com.flyby.ramble.matching.model.Region;
@@ -13,25 +14,13 @@ import com.flyby.ramble.session.service.SessionService;
 import com.flyby.ramble.user.model.Gender;
 import com.flyby.ramble.user.model.User;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.redisson.api.RBucket;
-import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -44,39 +33,11 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 @DisplayName("SessionManager 테스트 (실제 Redis)")
-@Testcontainers
-@ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = {
-        RedissonConfig.class,
         SessionManager.class,
-        SessionManagerTest.TestConfig.class
+        MockEventPublisherConfig.class
 })
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class SessionManagerTest {
-
-    @TestConfiguration
-    static class TestConfig {
-        @Bean
-        @Primary
-        public ApplicationEventPublisher mockEventPublisher() {
-            return Mockito.mock(ApplicationEventPublisher.class);
-        }
-    }
-
-    @Container
-    @ServiceConnection(name = "redis")
-    static final GenericContainer<?> redis = new GenericContainer<>("redis:7.0-alpine")
-            .withExposedPorts(6379)
-            .withReuse(true);
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.redis.host", redis::getHost);
-        registry.add("spring.data.redis.port", redis::getFirstMappedPort);
-    }
-
-    @Autowired
-    private RedissonClient redissonClient;
+class SessionManagerTest extends RedisTestBase {
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
@@ -105,11 +66,6 @@ class SessionManagerTest {
                     .build();
             testUsers.add(user);
         }
-    }
-
-    @AfterEach
-    void tearDown() {
-        redissonClient.getKeys().flushdb();
     }
 
     @DisplayName("saveSessions: 저장 및 조회")

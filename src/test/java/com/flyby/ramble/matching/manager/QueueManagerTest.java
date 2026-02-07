@@ -1,6 +1,6 @@
 package com.flyby.ramble.matching.manager;
 
-import com.flyby.ramble.common.config.RedissonConfig;
+import com.flyby.ramble.matching.RedisTestBase;
 import com.flyby.ramble.matching.constants.MatchingConstants;
 import com.flyby.ramble.matching.dto.MatchingProfile;
 import com.flyby.ramble.matching.model.Language;
@@ -8,22 +8,14 @@ import com.flyby.ramble.matching.model.Region;
 import com.flyby.ramble.matching.util.RedisKeyBuilder;
 import com.flyby.ramble.user.model.Gender;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.redisson.api.RScoredSortedSet;
 import org.redisson.api.RBucket;
-import org.redisson.api.RedissonClient;
+import org.redisson.api.RScoredSortedSet;
 import org.redisson.client.codec.StringCodec;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -31,31 +23,14 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("QueueManager 테스트 (실제 Redis)")
-@Testcontainers
-@ExtendWith(SpringExtension.class)
-@ContextConfiguration(classes = {RedissonConfig.class, QueueManager.class})
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class QueueManagerTest {
-
-    @Container
-    @ServiceConnection(name = "redis")
-    static final GenericContainer<?> redis = new GenericContainer<>("redis:7.0-alpine")
-            .withExposedPorts(6379)
-            .withReuse(true);
-
-    @DynamicPropertySource
-    static void redisProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.redis.host", redis::getHost);
-        registry.add("spring.data.redis.port", redis::getFirstMappedPort);
-    }
-
-    @Autowired
-    private RedissonClient redissonClient;
+@ContextConfiguration(classes = QueueManager.class)
+class QueueManagerTest extends RedisTestBase {
 
     @Autowired
     private QueueManager queueManager;
@@ -91,11 +66,6 @@ class QueueManagerTest {
                 .build();
     }
 
-    @AfterEach
-    void tearDown() {
-        redissonClient.getKeys().flushdb();
-    }
-
     @DisplayName("enqueue: 프로필 저장 및 대기열 추가")
     @Test
     @Order(1)
@@ -124,7 +94,7 @@ class QueueManagerTest {
     @Order(2)
     void requeue_addsToQueueOnly() {
         // when
-        queueManager.requeue(testProfile1);
+        queueManager.requeueAll(List.of(testProfile1));
         String queueKey = RedisKeyBuilder.buildQueueKey(testProfile1);
 
         // then
@@ -472,9 +442,265 @@ class QueueManagerTest {
                 assertThat(userList.size()).isBetween(minExpectedSize, maxExpectedSize));
     }
 
-    @DisplayName("Redis 연결 확인")
+    @DisplayName("[대량] pollWithProfiles - 같은 큐")
     @Test
     @Order(17)
+    void pollWithProfiles_bulk_sameQueue() {
+        // given
+        int userCount = 1000;
+
+        for (int i = 0; i < userCount; i++) {
+            MatchingProfile profile = MatchingProfile.builder()
+                    .userId((long) i)
+                    .userExternalId("user-" + i)
+                    .region(Region.KR)
+                    .gender(Gender.MALE)
+                    .language(Language.KO)
+                    .build();
+            queueManager.enqueue(profile);
+        }
+
+        // when
+        Map<String, List<MatchingProfile>> result = queueManager.pollWithProfiles();
+
+        // then
+        String queueKey = RedisKeyBuilder.buildQueueKey(Gender.MALE, Language.KO, Region.KR);
+
+        assertThat(result).hasSize(1).containsKey(queueKey);
+
+        List<MatchingProfile> profiles = result.get(queueKey);
+        assertThat(profiles)
+                .hasSize(Math.min(userCount, MatchingConstants.REDIS_BATCH_SIZE))
+                .allSatisfy(p -> {
+                    assertThat(p.getUserExternalId()).startsWith("user-");
+                    assertThat(p.getRegion()).isEqualTo(Region.KR);
+                    assertThat(p.getGender()).isEqualTo(Gender.MALE);
+                    assertThat(p.getLanguage()).isEqualTo(Language.KO);
+                    assertThat(p.getQueueEntryTime()).isGreaterThan(0);
+                })
+                .doesNotHaveDuplicates();
+    }
+
+    @DisplayName("[대량] pollWithProfiles - 다른 큐")
+    @Test
+    @Order(18)
+    void pollWithProfiles_bulk_differentQueues() {
+        Gender[] genders = Gender.values();
+        Language[] languages = Language.values();
+        Region[] regions = Region.values();
+
+        // given
+        int userCount = 1000;
+
+        for (int i = 0; i < userCount; i++) {
+            MatchingProfile profile = MatchingProfile.builder()
+                    .userId((long) i)
+                    .userExternalId("user-" + i)
+                    .region(regions[i % (regions.length - 1)])
+                    .gender(genders[i % (genders.length - 1)])
+                    .language(languages[i % (languages.length - 1)])
+                    .build();
+            queueManager.enqueue(profile);
+        }
+
+        // when
+        Map<String, List<MatchingProfile>> result = queueManager.pollWithProfiles();
+
+        // then - 여러 큐에 분산되어야 함
+        assertThat(result).hasSizeGreaterThan(1);
+
+        // 모든 프로필이 유효해야 함
+        List<MatchingProfile> allProfiles = result.values().stream()
+                .flatMap(List::stream)
+                .toList();
+
+        assertThat(allProfiles)
+                .hasSizeLessThanOrEqualTo(MatchingConstants.REDIS_BATCH_SIZE)
+                .allSatisfy(p -> {
+                    assertThat(p.getUserExternalId()).startsWith("user-");
+                    assertThat(p.getQueueEntryTime()).isGreaterThan(0);
+                })
+                .doesNotHaveDuplicates();
+
+        // 각 큐 내 프로필의 속성이 일관성 있어야 함 (같은 큐 키 → 같은 gender/language/region)
+        result.forEach((key, profiles) -> {
+            Set<String> queueKeys = profiles.stream()
+                    .map(RedisKeyBuilder::buildQueueKey)
+                    .collect(Collectors.toSet());
+            assertThat(queueKeys).as("큐 '%s'의 프로필은 모두 같은 큐 키를 가져야 함", key).hasSize(1);
+        });
+    }
+
+    @DisplayName("[성능] pollWithProfiles - 같은 큐")
+    @Test
+    @Order(19)
+    void pollWithProfiles_performance_sameQueue() {
+        // given
+        int userCount = 1000;
+
+        for (int i = 0; i < userCount; i++) {
+            MatchingProfile profile = MatchingProfile.builder()
+                    .userId((long) i)
+                    .userExternalId("user-" + i)
+                    .region(Region.KR)
+                    .gender(Gender.MALE)
+                    .language(Language.KO)
+                    .build();
+            queueManager.enqueue(profile);
+        }
+
+        // when
+        LocalDateTime start = LocalDateTime.now();
+        Map<String, List<MatchingProfile>> result = queueManager.pollWithProfiles();
+        LocalDateTime end   = LocalDateTime.now();
+
+        // then
+        long elapsed = ChronoUnit.MILLIS.between(start, end);
+        System.out.println("삽입 시작: " + start);
+        System.out.println("삽입 완료: " + end);
+        System.out.println("소요 시간: " + elapsed + "ms");
+
+        assertThat(result).isNotEmpty();
+        assertThat(elapsed).as("pollWithProfiles 같은 큐 %dms 이내", 3000).isLessThan(3000);
+    }
+
+    @DisplayName("[성능] pollWithProfiles - 다른 큐")
+    @Test
+    @Order(20)
+    void pollWithProfiles_performance_differentQueues() {
+        Gender[] genders = Gender.values();
+        Language[] languages = Language.values();
+        Region[] regions = Region.values();
+
+        // given
+        int userCount = 1000;
+
+        for (int i = 0; i < userCount; i++) {
+            MatchingProfile profile = MatchingProfile.builder()
+                    .userId((long) i)
+                    .userExternalId("user-" + i)
+                    .region(regions[i % (regions.length - 1)])
+                    .gender(genders[i % (genders.length - 1)])
+                    .language(languages[i % (languages.length - 1)])
+                    .build();
+            queueManager.enqueue(profile);
+        }
+
+        // when
+        LocalDateTime start = LocalDateTime.now();
+        Map<String, List<MatchingProfile>> result = queueManager.pollWithProfiles();
+        LocalDateTime end   = LocalDateTime.now();
+
+        // then
+        long elapsed = ChronoUnit.MILLIS.between(start, end);
+        System.out.println("삽입 시작: " + start);
+        System.out.println("삽입 완료: " + end);
+        System.out.println("소요 시간: " + elapsed + "ms");
+        System.out.println("[성능] pollWithProfiles 다른 큐 (" + userCount + "명): " + elapsed + "ms");
+
+        assertThat(result).isNotEmpty();
+        assertThat(elapsed).as("pollWithProfiles 다른 큐 %dms 이내", 3000).isLessThan(3000);
+    }
+
+    @DisplayName("[동시성] pollWithProfiles - 같은 큐")
+    @Test
+    @Order(21)
+    void pollWithProfiles_concurrent_sameQueue() {
+        // given - 멀티스레드로 동일 큐에 enqueue
+        int threadCount = 500;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+
+        List<CompletableFuture<Void>> futures = IntStream.range(0, threadCount)
+                .mapToObj(i -> CompletableFuture.runAsync(() -> {
+                    MatchingProfile profile = MatchingProfile.builder()
+                            .userId((long) i)
+                            .userExternalId("concurrent-user-" + i)
+                            .region(Region.KR)
+                            .gender(Gender.MALE)
+                            .language(Language.KO)
+                            .build();
+                    queueManager.enqueue(profile);
+                }, executor))
+                .toList();
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        executor.shutdown();
+
+        // when
+        Map<String, List<MatchingProfile>> result = queueManager.pollWithProfiles();
+
+        // then
+        String queueKey = RedisKeyBuilder.buildQueueKey(Gender.MALE, Language.KO, Region.KR);
+
+        assertThat(result).hasSize(1).containsKey(queueKey);
+
+        List<MatchingProfile> profiles = result.get(queueKey);
+        assertThat(profiles)
+                .hasSize(Math.min(threadCount, MatchingConstants.REDIS_BATCH_SIZE))
+                .allSatisfy(p -> {
+                    assertThat(p.getUserExternalId()).startsWith("concurrent-user-");
+                    assertThat(p.getRegion()).isEqualTo(Region.KR);
+                    assertThat(p.getGender()).isEqualTo(Gender.MALE);
+                    assertThat(p.getLanguage()).isEqualTo(Language.KO);
+                })
+                .doesNotHaveDuplicates();
+    }
+
+    @DisplayName("[동시성] pollWithProfiles - 다른 큐")
+    @Test
+    @Order(22)
+    void pollWithProfiles_concurrent_differentQueues() {
+        Gender[] genders = Gender.values();
+        Language[] languages = Language.values();
+        Region[] regions = Region.values();
+
+        // given - 멀티스레드로 다양한 큐에 enqueue
+        int threadCount = 500;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+
+        List<CompletableFuture<Void>> futures = IntStream.range(0, threadCount)
+                .mapToObj(i -> CompletableFuture.runAsync(() -> {
+                    MatchingProfile profile = MatchingProfile.builder()
+                            .userId((long) i)
+                            .userExternalId("concurrent-user-" + i)
+                            .region(regions[i % (regions.length - 1)])
+                            .gender(genders[i % (genders.length - 1)])
+                            .language(languages[i % (languages.length - 1)])
+                            .build();
+                    queueManager.enqueue(profile);
+                }, executor))
+                .toList();
+
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        executor.shutdown();
+
+        // when
+        Map<String, List<MatchingProfile>> result = queueManager.pollWithProfiles();
+
+        // then - 여러 큐에 분산
+        assertThat(result).hasSizeGreaterThan(1);
+
+        List<MatchingProfile> allProfiles = result.values().stream()
+                .flatMap(List::stream)
+                .toList();
+
+        assertThat(allProfiles)
+                .hasSizeLessThanOrEqualTo(MatchingConstants.REDIS_BATCH_SIZE)
+                .allSatisfy(p -> assertThat(p.getUserExternalId()).startsWith("concurrent-user-"))
+                .doesNotHaveDuplicates();
+
+        // 각 큐 내 프로필 속성 일관성 검증
+        result.forEach((key, profiles) -> {
+            Set<String> queueKeys = profiles.stream()
+                    .map(RedisKeyBuilder::buildQueueKey)
+                    .collect(Collectors.toSet());
+            assertThat(queueKeys).as("큐 '%s'의 프로필은 모두 같은 큐 키를 가져야 함", key).hasSize(1);
+        });
+    }
+
+    @DisplayName("Redis 연결 확인")
+    @Test
+    @Order(23)
     void redis_connectionHealthCheck() {
         // when - 간단한 read/write로 연결 확인
         RBucket<String> bucket = redissonClient.getBucket("health:check");
