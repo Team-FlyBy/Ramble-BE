@@ -20,7 +20,6 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Component
@@ -181,19 +180,13 @@ public class SessionManager {
     }
 
     private void publishEndedEvent(SessionData sessionInfo) {
-        // TODO: Executor 방식도 고려
-        CompletableFuture.runAsync(() -> {
-            SessionEndedEvent event = SessionEndedEvent.builder()
-                    .sessionUuid(sessionInfo.sessionId())
-                    .startedAt(sessionInfo.startedAt())
-                    .endedAt(LocalDateTime.now())
-                    .build();
+        SessionEndedEvent event = SessionEndedEvent.builder()
+                .sessionUuid(sessionInfo.sessionId())
+                .startedAt(sessionInfo.startedAt())
+                .endedAt(LocalDateTime.now())
+                .build();
 
-            eventPublisher.publishEvent(event);
-        }).exceptionally(ex -> {
-            log.error("세션 종료 이벤트 발행 실패: sessionId={}", sessionInfo.sessionId(), ex);
-            return null;
-        });
+        eventPublisher.publishEvent(event);
     }
 
     private Set<String> buildRelatedKeys(SessionData sessionInfo) {
