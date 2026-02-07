@@ -20,7 +20,7 @@ public class SignalingController {
     private final GeoIpService geoIpService;
     private final MatchingService matchingService;
 
-    @Deprecated(since = "2026-01-??", forRemoval = true)
+    @Deprecated(since = "2026-02-08", forRemoval = true)
     @MessageMapping("/match/request")
     public void handleMatchRequest(@Payload MatchRequestDTO request,
                                    SimpMessageHeaderAccessor headerAccessor,
@@ -39,7 +39,7 @@ public class SignalingController {
         matchingService.relaySignal(userId, message);
     }
 
-    @Deprecated(since = "2026-01-??", forRemoval = true)
+    @Deprecated(since = "2026-02-08", forRemoval = true)
     @MessageMapping("/match/cancel")
     public void handleCancelMatch(Principal principal) {
         String userId = getUserId(principal);

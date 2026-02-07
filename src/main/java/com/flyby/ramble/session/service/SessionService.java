@@ -40,6 +40,8 @@ public class SessionService {
         sessionBatchRepository.saveSessionsWithParticipants(list);
     }
 
+    // TODO: @Retryable이 동작하지 않을 수 있음. 추후 수정
+
     @Async
     @Retryable(
             retryFor = {DataAccessException.class},
