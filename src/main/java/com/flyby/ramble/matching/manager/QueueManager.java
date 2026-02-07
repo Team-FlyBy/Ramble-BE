@@ -56,34 +56,31 @@ public class QueueManager {
     }
 
     /**
-     * 재등록시 사용. Bucket 제외 큐에만 삽입
+     * 재등록시 사용. Bucket 제외 큐에만 삽입 (TTL 유지)
      */
-    public boolean requeue(MatchingProfile profile) {
-        if (profile == null) {
-            return false;
+    public void requeueAll(Collection<MatchingProfile> profiles) {
+        if (profiles == null || profiles.isEmpty()) {
+            return;
         }
 
-        String queueKey = RedisKeyBuilder.buildQueueKey(profile);
-        String userId = profile.getUserExternalId();
-        long score = profile.getQueueEntryTime() != 0 ?
-                profile.getQueueEntryTime() :
-                System.currentTimeMillis();
-
-        // RBatch를 사용하여 SortedSet(대기열), SetCache(활성 대기열 키) 한 번에 처리
+        // RBatch를 사용하여 SortedSet(대기열) 한 번에 처리
         RBatch batch = redissonClient.createBatch();
 
-        // 대기열에 사용자 추가
-        batch.getScoredSortedSet(queueKey, StringCodec.INSTANCE).addAsync(score, userId);
-        // 활성 대기열 키 추가
-        batch.getSetCache(MatchingConstants.QUEUE_ACTIVE)
-                .addAsync(queueKey, MatchingConstants.QUEUE_TTL, TimeUnit.MINUTES);
+        for (MatchingProfile profile : profiles) {
+            String queueKey = RedisKeyBuilder.buildQueueKey(profile);
+
+            long score = profile.getQueueEntryTime();
+            // 대기열에 사용자 추가
+            batch.getScoredSortedSet(queueKey, StringCodec.INSTANCE).addAsync(score, profile.getUserExternalId());
+            // 활성 대기열 키 추가 (TTL에 의해 제거되었을 수 있어 재삽입)
+            batch.getSetCache(MatchingConstants.QUEUE_ACTIVE)
+                    .addAsync(queueKey, MatchingConstants.QUEUE_TTL, TimeUnit.MINUTES);
+        }
 
         try {
             batch.execute();
-            return true;
         } catch (RedisException e) {
             log.error(e.getMessage(), e);
-            return false;
         }
     }
 
@@ -149,11 +146,22 @@ public class QueueManager {
     }
 
     public Map<String, MatchingProfile> getProfiles(Set<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
         Set<String> profileKeys = userIds.stream()
                 .map(RedisKeyBuilder::buildProfileKey)
                 .collect(Collectors.toSet());
 
-        return executeFetchBuckets(profileKeys);
+        Map<String, MatchingProfile> raw = executeFetchBuckets(profileKeys);
+        String prefix = MatchingConstants.PROFILE + ":";
+
+        return raw.entrySet().stream()
+                .collect(Collectors.toMap(
+                        e -> e.getKey().substring(prefix.length()),
+                        Map.Entry::getValue
+                ));
     }
 
     /**
@@ -162,13 +170,18 @@ public class QueueManager {
     public Map<String, Integer> getActiveQueueSizes() {
         // 활성 대기열 조회
         RSet<String> activeQueues = redissonClient.getSetCache(MatchingConstants.QUEUE_ACTIVE);
+        Set<String> keys = activeQueues.readAll();
+
+        if (keys.isEmpty()) {
+            return Collections.emptyMap();
+        }
 
         // RBatch를 사용하여 SortedSet(대기열) 여러 개를 한 번에 처리
         RBatch batch = redissonClient.createBatch();
         Map<String, RFuture<Integer>> futures = new LinkedHashMap<>();
 
         // 각 대기열의 크기 조회
-        for (String queueKey : activeQueues) {
+        for (String queueKey : keys) {
             RScoredSortedSetAsync<String> queue = batch.getScoredSortedSet(queueKey);
             futures.put(queueKey, queue.sizeAsync());
         }
@@ -204,13 +217,49 @@ public class QueueManager {
      * @param queueKeys map의 key(queueKey), value(size)
      */
     public Map<String, List<String>> poll(Map<String, Integer> queueKeys) {
-        executeEvictExpired(queueKeys.keySet()); // 만료된 항목 정리
+        if (queueKeys == null || queueKeys.isEmpty()) {
+            return Collections.emptyMap();
+        }
 
         // 각 대기열에서 조회한 결과를 반환
         return executePoll(
                 queueKeys,
                 Function.identity()
         );
+    }
+
+    /**
+     * 모든 활성 대기열에서 대기열 키별 {@link MatchingProfile} 목록을 poll
+     * <p>
+     *     {@link #poll()}로 조회한 대기열을 기반으로
+     *     {@link #getProfiles(Set)}로 프로필 정보를 조회하고,
+     *     {@link MatchingProfile}로 매핑.
+     * </p>
+     * <b>NOTE:</b> 프로필이 만료되어 조회되지 않는 사용자는 결과에서 제외
+     */
+    public Map<String, List<MatchingProfile>> pollWithProfiles() {
+        Map<String, List<String>> groups = poll(); // 대기열 조회
+        Map<String, MatchingProfile> profiles = getProfiles(buildUserIds(groups)); // 프로필 조회
+
+        if (groups.isEmpty() || profiles.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        // userId → MatchingProfile 변환, null 프로필 필터링
+        Map<String, List<MatchingProfile>> result = new LinkedHashMap<>();
+
+        groups.forEach((key, userIds) -> {
+            List<MatchingProfile> profileList = userIds.stream()
+                    .map(profiles::get)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toCollection(LinkedList::new));
+
+            if (!profileList.isEmpty()) {
+                result.put(key, profileList);
+            }
+        });
+
+        return result;
     }
 
     /* --- 내부 메서드 --- */
@@ -240,35 +289,6 @@ public class QueueManager {
     }
 
     /**
-     * RScoredSortedSet 만료된 항목 제거 (RScoredSortedSet은 개별 TTL 지원이 없음)
-     * @param keys 대상 key set
-     */
-    private <T> void executeEvictExpired(Set<String> keys) {
-        if (keys == null || keys.isEmpty()) {
-            return;
-        }
-
-        // RBatch를 사용하여 SortedSet(대기열) 여러 개를 한 번에 처리
-        RBatch batch = redissonClient.createBatch();
-
-        // 시간 계산 (현재 시간 - 5분)
-        long now = System.currentTimeMillis();
-        double cutOffTime = now - (MatchingConstants.QUEUE_TTL * 60d * 1000);
-
-        // 만료된 항목 제거
-        for(String key : keys) {
-            RScoredSortedSetAsync<T> set = batch.getScoredSortedSet(key);
-            set.removeRangeByScoreAsync(0, true, cutOffTime, true);
-        }
-
-        try {
-            batch.execute();
-        } catch (RedisException e) {
-            log.error(e.getMessage(), e);
-        }
-    }
-
-    /**
      * Bucket 일괄 조회
      * @param keys 조회할 bucket key Set
      */
@@ -284,7 +304,7 @@ public class QueueManager {
     }
 
     /**
-     * RScoredSortedSet 일괄 조회
+     * RScoredSortedSet 일괄 조회 + 만료된 항목 제거 (RScoredSortedSet은 개별 TTL 지원이 없음)
      * @param keys 조회할 key Map(key, size)
      */
     private <T, D> Map<String, List<D>> executePoll(
@@ -300,6 +320,13 @@ public class QueueManager {
         // RBatch를 사용하여 SortedSet(대기열) 여러 개를 한 번에 처리
         RBatch batch = redissonClient.createBatch();
         Map<String, RFuture<Collection<T>>> futures = new LinkedHashMap<>();
+        double cutOffTime = System.currentTimeMillis() - (MatchingConstants.QUEUE_TTL * 60d * 1000); // 현재 시간 - 5분
+
+        // 만료된 항목 제거
+        for (String key : keys.keySet()) {
+            batch.getScoredSortedSet(key, StringCodec.INSTANCE)
+                    .removeRangeByScoreAsync(0, true, cutOffTime, true);
+        }
 
         // 각 대기열에서 사용자를 poll
         keys.forEach((key, value) -> {
@@ -355,6 +382,12 @@ public class QueueManager {
             double ratio = (double) value / totalSize;
             return (int) Math.ceil(ratio * MatchingConstants.REDIS_BATCH_SIZE);
         }
+    }
+
+    private Set<String> buildUserIds(Map<String, List<String>> groups) {
+        return groups.values().stream()
+                .flatMap(List::stream)
+                .collect(Collectors.toSet());
     }
 
 }
