@@ -561,7 +561,7 @@ class QueueManagerTest extends RedisTestBase {
         System.out.println("소요 시간: " + elapsed + "ms");
 
         assertThat(result).isNotEmpty();
-        assertThat(elapsed).as("pollWithProfiles 같은 큐 %dms 이내", 3000).isLessThan(3000);
+        assertThat(elapsed).as("pollWithProfiles 같은 큐 %dms 이내", 500).isLessThan(500);
     }
 
     @DisplayName("[성능] pollWithProfiles - 다른 큐")
@@ -599,7 +599,7 @@ class QueueManagerTest extends RedisTestBase {
         System.out.println("[성능] pollWithProfiles 다른 큐 (" + userCount + "명): " + elapsed + "ms");
 
         assertThat(result).isNotEmpty();
-        assertThat(elapsed).as("pollWithProfiles 다른 큐 %dms 이내", 3000).isLessThan(3000);
+        assertThat(elapsed).as("pollWithProfiles 다른 큐 %dms 이내", 500).isLessThan(500);
     }
 
     @DisplayName("[동시성] pollWithProfiles - 같은 큐")

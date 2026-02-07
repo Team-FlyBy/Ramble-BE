@@ -657,9 +657,9 @@ class MatchingServiceTest extends RedisTestBase {
         System.out.println("삽입 시작: " + start);
         System.out.println("삽입 완료: " + end);
         System.out.println("소요 시간: " + elapsed + "ms");
-        System.out.println("[성능] pollWithProfiles 다른 큐 (" + userCount + "명): " + elapsed + "ms");
+        System.out.println("[성능] processMatchingQueue 다른 큐 (" + userCount + "명): " + elapsed + "ms");
 
-        assertThat(elapsed).as(userCount + "명 매칭은 3초 이내 완료되어야 함").isLessThan(3000);
+        assertThat(elapsed).as("%d명 매칭은 %dms 이내 완료되어야 함", userCount, 500).isLessThan(500);
     }
 
     @DisplayName("processMatchingQueue: 프로필 만료 → 매칭 없음")
