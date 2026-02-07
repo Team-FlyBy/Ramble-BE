@@ -1,5 +1,6 @@
 package com.flyby.ramble.matching.service;
 
+import com.flyby.ramble.matching.constants.MatchingConstants;
 import com.flyby.ramble.matching.dto.*;
 import com.flyby.ramble.matching.manager.QueueManager;
 import com.flyby.ramble.matching.manager.SessionManager;
@@ -12,12 +13,16 @@ import com.flyby.ramble.user.dto.UserInfoDTO;
 import com.flyby.ramble.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -26,6 +31,7 @@ public class MatchingService {
     private final QueueManager queueManager;
     private final SessionManager sessionManager;
     private final SignalingRelayer signalingRelayer;
+    private final RedissonClient redissonClient;
 
     private final UserService userService;
 
@@ -43,25 +49,36 @@ public class MatchingService {
         UserInfoDTO requesterInfo = userService.getUserByExternalId(userId);
         MatchingProfile requesterProfile = buildMatchingProfile(requesterInfo, region, request);
 
-        // 기존 데이터 정리
-        disconnectUser(userId);
-        boolean result = queueManager.enqueue(requesterProfile);
+        RLock lock = redissonClient.getLock(MatchingConstants.MATCHING_LOCK);
+        lock.lock();
 
-        return result ?
-                MatchResultDTO.waiting() :
-                MatchResultDTO.failed("대기열 등록에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        try {
+            disconnectUser(userId);
+            boolean result = queueManager.enqueue(requesterProfile);
+
+            return result ?
+                    MatchResultDTO.waiting() :
+                    MatchResultDTO.failed("대기열 등록에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
      * 사용자가 연결을 끊었을 때 정리
      */
     public void disconnectUser(String userId) {
-        // 대기열에 있을 때 -> 대기열 및 프로필에서 제거
-        boolean result = queueManager.dequeue(userId);
+        RLock lock = redissonClient.getLock(MatchingConstants.MATCHING_LOCK);
+        lock.lock();
 
-        // 대기열에 없을 때 -> 채팅 세션에서 제거 및 상대방에게 알림
-        if (!result) {
-            terminateSession(userId);
+        try {
+            boolean result = queueManager.dequeue(userId);
+
+            if (!result) {
+                terminateSession(userId);
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -90,9 +107,19 @@ public class MatchingService {
 
     /* --- 매칭 ---- */
 
-    // 인스턴스 확장 계획 이전까지는 현재 방식 유지 (현재는 단일 인스턴스)
     @Scheduled(fixedDelay = 2000)
     public void processMatchingQueue() {
+        RLock lock = redissonClient.getLock(MatchingConstants.MATCHING_LOCK);
+
+        try {
+            if (!lock.tryLock(0, 10, TimeUnit.SECONDS)) {
+                return;
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;
+        }
+
         try {
             // 데이터 조회
             Map<String, List<MatchingProfile>> groups = queueManager.pollWithProfiles();
@@ -106,15 +133,18 @@ public class MatchingService {
             MatchRoundResult round2 = pairCandidates(regroupRemaining(round1.remaining()), now); // 2단계 매칭 (성별:언어): 매칭 되지 않은 인원(최대 390명, 각 그룹당 1명)을 재그룹해서 매칭
             MatchRoundResult round3 = pairCandidates(regroupRemaining(round2.remaining()), now); // 3단계 매칭 (무작위): 남은 인원 전체(최대 26명)에서 매칭
 
-            List<SessionData> allMatched = new ArrayList<>();
-            allMatched.addAll(round1.matched());
-            allMatched.addAll(round2.matched());
-            allMatched.addAll(round3.matched());
+            List<SessionData> allMatched = Stream.of(round1, round2, round3)
+                    .flatMap(r -> r.matched().stream())
+                    .toList();
 
             finalizeMatches(allMatched);
             requeueUnmatched(round3.remaining());
         } catch (Exception e) {
             log.error("매칭 워커 오류 발생", e);
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
     }
 
@@ -209,10 +239,6 @@ public class MatchingService {
         }
 
         List<MatchingProfile> profiles = remaining.values().stream().toList();
-
-        if (profiles.isEmpty()) {
-            return;
-        }
 
         // 매칭 후 인원이 남았다면 다시 큐에 삽입
         queueManager.requeueAll(profiles);

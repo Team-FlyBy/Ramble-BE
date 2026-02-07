@@ -22,6 +22,9 @@ public final class MatchingConstants {
     public static final String SESSION      = "match:session";      // 매칭 세션 키
     public static final String SESSION_USER = "match:session:user"; // userId → sessionId 매핑
 
+    // 분산 락
+    public static final String MATCHING_LOCK = "match:lock:pipeline";
+
     public static final int REDIS_BATCH_SIZE = 1000; // Redis 배치 처리 단위
     public static final int QUEUE_TTL = 5;           // 대기열 TTL (분)
     public static final int SESSION_TTL = 720;       // 세션 TTL (분, 12시간)
