@@ -82,6 +82,10 @@ public class NudeDetectionServiceImpl implements NudeDetectionService {
 
             // 임시 파일 생성
             tempFile = File.createTempFile("snapshot-", ".jpg.enc");
+            tempFile.setReadable(false, false);
+            tempFile.setReadable(true, true);
+            tempFile.setWritable(false, false);
+            tempFile.setWritable(true, true);
 
             try (
                     InputStream inputStream = videoSnapshot.getInputStream();
