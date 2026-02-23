@@ -32,7 +32,7 @@ public enum Region {
                 .filter(region -> region.name().equalsIgnoreCase(value))
                 .findFirst()
                 .orElseGet(() -> {
-                    log.warn("알 수 없는 언어 코드, NONE으로 처리: {}", value);
+                    log.warn("알 수 없는 지역 코드, NONE으로 처리: {}", value);
                     return NONE;
                 });
     }
