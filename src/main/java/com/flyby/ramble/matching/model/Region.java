@@ -2,9 +2,11 @@ package com.flyby.ramble.matching.model;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.stream.Stream;
 
+@Slf4j
 @JsonFormat(shape = JsonFormat.Shape.STRING)
 public enum Region {
     KR, // 한국
@@ -29,6 +31,9 @@ public enum Region {
         return Stream.of(Region.values())
                 .filter(region -> region.name().equalsIgnoreCase(value))
                 .findFirst()
-                .orElse(NONE);
+                .orElseGet(() -> {
+                    log.warn("알 수 없는 언어 코드, NONE으로 처리: {}", value);
+                    return NONE;
+                });
     }
 }
