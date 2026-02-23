@@ -55,9 +55,14 @@ public class RedisKeyBuilder {
             throw new IllegalArgumentException("Redis Key는 null이거나 비어있을 수 없습니다");
         }
 
+        // 공백 검증
+        if (key.trim().length() != key.length()) {
+            throw new IllegalArgumentException("Redis Key에 앞뒤 공백이 포함되어 있습니다: " + key);
+        }
+
         // Redis 키에 사용할 수 없는 문자 검증
-        if (key.contains(":") || key.contains("*") || key.contains("[") || key.contains("]")) {
-            throw new IllegalArgumentException("Redis Key에 유효하지 않은 문자가 포함되어 있습니다: " + key);
+        if (!key.matches("^[a-zA-Z0-9_-]+$")) {
+            throw new IllegalArgumentException("Redis Key에 허용되지 않은 문자가 포함되어 있습니다: " + key);
         }
 
         // 최대 길이 제한
