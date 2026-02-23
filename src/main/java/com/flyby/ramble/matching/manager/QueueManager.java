@@ -52,7 +52,7 @@ public class QueueManager {
             batch.execute();
             return true;
         } catch (RedisException e) {
-            log.error(e.getMessage(), e);
+            log.error("Failed to enqueue user: userId={}, queueKey={}", userId, queueKey, e);
             return false;
         }
     }
