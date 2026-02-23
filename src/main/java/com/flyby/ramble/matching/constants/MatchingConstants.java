@@ -11,24 +11,22 @@ public final class MatchingConstants {
     public static final String SUBSCRIPTION_MATCHING  = "/queue/match";
     public static final String SUBSCRIPTION_SIGNALING = "/queue/signal";
 
-    /*  Redis Keys  */
-    public static final String MATCHMAKING_LOCK_KEY = "webrtc:matchmaking_lock"; // 분산 락을 위한 키
-    public static final String MATCHMAKING_POOL_KEY = "webrtc:matchmaking_pool"; // 매칭 대기자 풀 키
+    /*  Redis */
 
-    /*  Redis    */
+    // 매칭 대기열
+    public static final String QUEUE        = "match:queue";        // 매칭 대기열 키
+    public static final String QUEUE_ACTIVE = "match:queue:active"; // 활성 대기열 키 (매칭 대기열 키 목록 반환)
+    // 매칭 프로필
+    public static final String PROFILE      = "match:profile";      // 매칭 프로필 키
+    // 세션
+    public static final String SESSION      = "match:session";      // 매칭 세션 키
+    public static final String SESSION_USER = "match:session:user"; // userId → sessionId 매핑
 
-    public static final int MAX_WAITING_QUEUE_SIZE = 50;
-    public static final int LOCK_WAIT_SECONDS = 5;
-    public static final int LOCK_LEASE_SECONDS = 10;
+    // 분산 락
+    public static final String MATCHING_LOCK = "match:lock:pipeline";
 
-    /*  Scoring Weights  */
-
-    public static final int WAITING_SCORE_PER_10_SECONDS = 1;
-    public static final int MINIMUM_MATCH_SCORE = 10;
-
-    public static final int REGION_MATCH_SCORE = 15;
-    public static final int REGION_PARTIAL_MATCH_SCORE = 5;
-    public static final int GENDER_DIFFERENCE_SCORE = 5;
-    public static final int LANGUAGE_MATCH_SCORE = 5;
+    public static final int REDIS_BATCH_SIZE = 1000; // Redis 배치 처리 단위
+    public static final int QUEUE_TTL = 5;           // 대기열 TTL (분)
+    public static final int SESSION_TTL = 720;       // 세션 TTL (분, 12시간)
 
 }

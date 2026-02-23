@@ -2,6 +2,7 @@ package com.flyby.ramble.common.config;
 
 import com.flyby.ramble.common.interceptor.WebSocketChannelInterceptor;
 import com.flyby.ramble.common.interceptor.WebSocketIpHandshakeInterceptor;
+import com.flyby.ramble.common.properties.SecurityHttpProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +18,8 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    private final SecurityHttpProperties securityHttpProperties;
+
     private final WebSocketChannelInterceptor channelInterceptor;
     private final WebSocketIpHandshakeInterceptor ipHandshakeInterceptor;
 
@@ -29,8 +32,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        String[] allowedOrigins = securityHttpProperties.getAllowedOrigins().toArray(new String[0]);
+
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*") // TODO: 추후 도메인으로 변경
+                .setAllowedOriginPatterns(allowedOrigins)
                 .addInterceptors(ipHandshakeInterceptor)
                 .withSockJS();
     }
