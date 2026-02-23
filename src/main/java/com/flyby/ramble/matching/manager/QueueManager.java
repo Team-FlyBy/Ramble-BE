@@ -22,6 +22,8 @@ import java.util.stream.Collectors;
 public class QueueManager {
     private final RedissonClient redissonClient;
 
+    private static final double CUT_OFF_TIME_MS = MatchingConstants.QUEUE_TTL * 60d * 1000;
+
     public boolean enqueue(MatchingProfile profile) {
         if (profile == null) {
             return false;
@@ -320,7 +322,7 @@ public class QueueManager {
         // RBatch를 사용하여 SortedSet(대기열) 여러 개를 한 번에 처리
         RBatch batch = redissonClient.createBatch();
         Map<String, RFuture<Collection<T>>> futures = new LinkedHashMap<>();
-        double cutOffTime = System.currentTimeMillis() - (MatchingConstants.QUEUE_TTL * 60d * 1000); // 현재 시간 - 5분
+        double cutOffTime = System.currentTimeMillis() - CUT_OFF_TIME_MS; // 현재 시간 - 5분
 
         // 만료된 항목 제거
         for (String key : keys.keySet()) {
