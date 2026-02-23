@@ -50,35 +50,65 @@ public class MatchingService {
         MatchingProfile requesterProfile = buildMatchingProfile(requesterInfo, region, request);
 
         RLock lock = redissonClient.getLock(MatchingConstants.MATCHING_LOCK);
-        lock.lock();
 
         try {
-            disconnectUser(userId);
+            if (!lock.tryLock(3, TimeUnit.SECONDS)) {
+                log.warn("매칭 요청 락 획득 실패: userId={}", userId);
+                return MatchResultDTO.failed("현재 서버가 혼잡합니다. 잠시 후 다시 시도해주세요.");
+            }
+
+            disconnectUser(userId, System.currentTimeMillis());
             boolean result = queueManager.enqueue(requesterProfile);
 
             return result ?
                     MatchResultDTO.waiting() :
                     MatchResultDTO.failed("대기열 등록에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return MatchResultDTO.failed("매칭 요청 처리 중 오류가 발생했습니다.");
         } finally {
-            lock.unlock();
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
     }
 
     /**
      * 사용자가 연결을 끊었을 때 정리
+     *
+     * @param userId 사용자 ID
+     * @param disconnectTimestamp 연결 해제 이벤트 발생 시점 (밀리초).
+     *                           enqueue 시점보다 이전이면 stale 이벤트로 판단하여 dequeue를 건너뜀.
      */
-    public void disconnectUser(String userId) {
+    public void disconnectUser(String userId, long disconnectTimestamp) {
         RLock lock = redissonClient.getLock(MatchingConstants.MATCHING_LOCK);
-        lock.lock();
 
         try {
-            boolean result = queueManager.dequeue(userId);
+            if (!lock.tryLock(3, TimeUnit.SECONDS)) {
+                log.warn("disconnectUser 락 획득 실패: userId={}", userId);
+                return;
+            }
 
-            if (!result) {
+            MatchingProfile profile = queueManager.getProfile(userId);
+
+            if (profile != null && profile.getQueueEntryTime() > disconnectTimestamp) {
+                log.info("Stale disconnect 무시: userId={}, enqueue={}ms > disconnect={}ms",
+                        userId, profile.getQueueEntryTime(), disconnectTimestamp);
+                return;
+            }
+
+            boolean dequeued = queueManager.dequeue(userId);
+
+            if (!dequeued) {
                 terminateSession(userId);
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("disconnectUser 처리 중 인터럽트 발생: userId={}", userId);
         } finally {
-            lock.unlock();
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
         }
     }
 
@@ -115,12 +145,7 @@ public class MatchingService {
             if (!lock.tryLock(0, 10, TimeUnit.SECONDS)) {
                 return;
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return;
-        }
 
-        try {
             // 데이터 조회
             Map<String, List<MatchingProfile>> groups = queueManager.pollWithProfiles();
 
@@ -139,6 +164,8 @@ public class MatchingService {
 
             finalizeMatches(allMatched);
             requeueUnmatched(round3.remaining());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         } catch (Exception e) {
             log.error("매칭 워커 오류 발생", e);
         } finally {
@@ -188,7 +215,7 @@ public class MatchingService {
             return Collections.emptyMap();
         }
 
-        boolean mergeMode = remaining.size() <= 6;
+        boolean mergeMode = remaining.size() <= 6; // 임시값. 현재는 유지
 
         // 2. Stream을 이용한 일괄 처리
         return remaining.entrySet().stream()

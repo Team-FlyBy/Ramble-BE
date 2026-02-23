@@ -53,7 +53,7 @@ public class MatchingController {
     public ResponseEntity<Void> handleCancelMatch(@AuthenticationPrincipal UserDetails user) {
         String userId = user.getUsername();
 
-        matchingService.disconnectUser(userId);
+        matchingService.disconnectUser(userId, System.currentTimeMillis());
 
         return ResponseEntity.noContent().build();
     }

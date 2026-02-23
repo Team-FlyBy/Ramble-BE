@@ -44,7 +44,7 @@ public class SignalingController {
     public void handleCancelMatch(Principal principal) {
         String userId = getUserId(principal);
 
-        matchingService.disconnectUser(userId);
+        matchingService.disconnectUser(userId, System.currentTimeMillis());
     }
 
     private String getUserId(Principal principal) {

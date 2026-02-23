@@ -171,7 +171,7 @@ class MatchingServiceTest extends RedisTestBase {
         assertThat(queueManager.getProfile(getExternalId(0))).isNotNull();
 
         // when
-        matchingService.disconnectUser(getExternalId(0));
+        matchingService.disconnectUser(getExternalId(0), System.currentTimeMillis());
 
         // then
         assertThat(queueManager.getProfile(getExternalId(0))).isNull();
@@ -191,7 +191,7 @@ class MatchingServiceTest extends RedisTestBase {
         assertThat(sessionManager.getSessionByUserId(getExternalId(2))).isNotNull();
 
         // when
-        matchingService.disconnectUser(getExternalId(0));
+        matchingService.disconnectUser(getExternalId(0), System.currentTimeMillis());
 
         // then - 양쪽 모두 세션 삭제
         assertThat(sessionManager.getSessionByUserId(getExternalId(0))).isNull();
@@ -203,7 +203,7 @@ class MatchingServiceTest extends RedisTestBase {
     @Order(7)
     void disconnectUser_userNotInQueueOrSession_noException() {
         // when & then
-        assertThatCode(() -> matchingService.disconnectUser(getExternalId(0)))
+        assertThatCode(() -> matchingService.disconnectUser(getExternalId(0), System.currentTimeMillis()))
                 .doesNotThrowAnyException();
     }
 
@@ -730,7 +730,7 @@ class MatchingServiceTest extends RedisTestBase {
         assertThat(queueManager.getProfile(getExternalId(2))).isNull();
 
         // Step 3: disconnectUser → 세션 삭제
-        matchingService.disconnectUser(getExternalId(0));
+        matchingService.disconnectUser(getExternalId(0), System.currentTimeMillis());
 
         assertThat(sessionManager.getSessionByUserId(getExternalId(0))).isNull();
         assertThat(sessionManager.getSessionByUserId(getExternalId(2))).isNull();
