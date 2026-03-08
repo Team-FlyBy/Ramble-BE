@@ -1,6 +1,6 @@
 spring:
-  main:
-    lazy-initialization: true # 지연 초기화 활성화 (필요 없으면 제거)
+#  main:
+#    lazy-initialization: true # 지연 초기화 활성화 (필요 없으면 제거)
   servlet:
     multipart:
       max-file-size: 10MB
@@ -8,7 +8,7 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${DB_URL}
+    url: ${DB_URL}?rewriteBatchedStatements=true
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 

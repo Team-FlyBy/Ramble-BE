@@ -1,6 +1,8 @@
 package com.flyby.ramble.session.model;
 
 import com.flyby.ramble.common.model.BaseEntity;
+import com.flyby.ramble.matching.model.Language;
+import com.flyby.ramble.matching.model.Region;
 import com.flyby.ramble.user.model.Gender;
 import com.flyby.ramble.user.model.User;
 import jakarta.persistence.*;
@@ -41,13 +43,14 @@ public class SessionParticipant extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private Gender gender;
 
-    private String region;
+    @Enumerated(EnumType.STRING)
+    private Region region;
 
-    private String language;
-
+    @Enumerated(EnumType.STRING)
+    private Language language;
 
     @Builder
-    public SessionParticipant(Session session, User user, Gender gender, String region, String language) {
+    public SessionParticipant(Session session, User user, Gender gender, Region region, Language language) {
         this.session = session;
         this.user = user;
         this.gender = gender;

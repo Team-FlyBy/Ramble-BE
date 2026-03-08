@@ -1,6 +1,6 @@
 spring:
-  main:
-    lazy-initialization: true # 지연 초기화 활성화 (필요 없으면 제거)
+#  main:
+#    lazy-initialization: true # 지연 초기화 활성화 (필요 없으면 제거)
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -19,6 +19,6 @@ spring:
 logging:
   level:
     root: INFO
-    org.hibernate.SQL: DEBUG
+#    org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     com.flyby.ramble: DEBUG # 애플리케이션 로깅

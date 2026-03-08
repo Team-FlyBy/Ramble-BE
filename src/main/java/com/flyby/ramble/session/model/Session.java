@@ -1,6 +1,8 @@
 package com.flyby.ramble.session.model;
 
 import com.flyby.ramble.common.model.BaseEntity;
+import com.flyby.ramble.matching.model.Language;
+import com.flyby.ramble.matching.model.Region;
 import com.flyby.ramble.user.model.Gender;
 import com.flyby.ramble.user.model.User;
 import jakarta.persistence.*;
@@ -47,7 +49,7 @@ public class Session extends BaseEntity {
         this.startedAt = startedAt;
     }
 
-    public void addParticipant(User user, Gender gender, String region, String language) {
+    public void addParticipant(User user, Gender gender, Region region, Language language) {
         SessionParticipant participant = SessionParticipant.builder()
                 .session(this)
                 .user(user)
