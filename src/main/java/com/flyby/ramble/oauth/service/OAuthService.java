@@ -3,81 +3,90 @@ package com.flyby.ramble.oauth.service;
 import com.flyby.ramble.auth.dto.Tokens;
 import com.flyby.ramble.auth.service.JwtService;
 import com.flyby.ramble.common.model.DeviceType;
-import com.flyby.ramble.oauth.dto.GooglePersonInfo;
-import com.flyby.ramble.oauth.dto.OAuthIdTokenDTO;
-import com.flyby.ramble.oauth.dto.OAuthPkceDTO;
-import com.flyby.ramble.oauth.dto.OAuthRegisterDTO;
+import com.flyby.ramble.common.model.OAuthProvider;
+import com.flyby.ramble.oauth.client.AppleOAuthClient;
+import com.flyby.ramble.oauth.client.GoogleOAuthClient;
+import com.flyby.ramble.oauth.dto.*;
 import com.flyby.ramble.oauth.util.OidcTokenParser;
 import com.flyby.ramble.user.dto.UserInfoDTO;
+import com.flyby.ramble.user.model.Gender;
+import com.flyby.ramble.oauth.dto.OAuthRevokeInfo;
 import com.flyby.ramble.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
 import org.springframework.security.oauth2.client.endpoint.RestClientAuthorizationCodeTokenResponseClient;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
+import org.springframework.security.oauth2.core.OAuth2RefreshToken;
 import org.springframework.security.oauth2.core.endpoint.*;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.function.Supplier;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class OAuthService {
-
     private final UserService userService;
     private final JwtService jwtService;
-    private final GooglePeopleApiService googlePeopleApiService;
+
+    private final GoogleOAuthClient googleOAuthClient;
+    private final AppleOAuthClient appleOAuthClient;
     private final OidcTokenParser oidcTokenParser;
 
     private final ClientRegistrationRepository clientRegistrationRepo;
 
-    // TODO: 추후 리팩토링
-    // 1. 회원가입의 경우, 추가 정보(생년월일, 성별 등) 동의하면 GooglePersonInfo 요청 (현재 로그인, 회원가입 구분 X)
-    // 2-1. 로그인의 경우, 유저에게 추가 정보(생년월일, 성별 등)가 있으면 GooglePersonInfo 요청 안 함.
-    // 2-2. 로그인의 경우, 유저에게 추가 정보(생년월일, 성별 등)가 없으면 동의 여부 재판단 GooglePersonInfo 요청.
-    // (이유) Google의 경우 처음에 동의 안 해도 재로그인 시 동의 창이 뜸. (회원가입 시 동의 안 했어도 로그인 시 동의할 수 있음)
-    // * 동의 여부는 access token의 scope로 판단 가능
+    // Authorization Code Flow + OIDC + PKCE
+    public Tokens authenticateWithAuthCode(OAuthProvider provider, OAuthPkceDTO request, DeviceType deviceType) {
+        OAuth2AccessTokenResponse tokenResponse = getTokenResponse(provider, request, deviceType);
 
-    public Tokens getTokensFromGoogleUser(OAuthPkceDTO request, DeviceType deviceType) {
-        OAuth2AccessTokenResponse tokenResponse = getGoogleTokenResponse(request.code(), request.codeVerifier(), request.redirectUri(), deviceType);
         OAuth2AccessToken accessToken = tokenResponse.getAccessToken();
+        OAuth2RefreshToken refreshToken = tokenResponse.getRefreshToken();
         String idToken = tokenResponse.getAdditionalParameters().get("id_token").toString();
 
-        // People API를 통한 추가 정보 수집
-        GooglePersonInfo personInfo  = googlePeopleApiService.getPersonInfo(accessToken);
-        OAuthRegisterDTO registerDTO = oidcTokenParser.parseGoogleIdToken(idToken, personInfo);
-        UserInfoDTO user = userService.registerOrLogin(registerDTO);
+        log.debug("idToken: {}", idToken);
+
+        OidcTokenInfo tokenInfo = oidcTokenParser.parseIdToken(provider, idToken);
+        String oauthRefreshToken = refreshToken != null ? refreshToken.getTokenValue() : null;
+        Supplier<OAuthPersonInfo> supplier = () -> resolvePersonInfo(provider, accessToken);
+
+        UserInfoDTO user = userService.findOrCreateUser(tokenInfo, supplier, oauthRefreshToken);
 
         return jwtService.generateTokens(user, deviceType);
     }
 
-    /**
-     * @deprecated 추후 삭제 예정. 클라이언트 수정 후 제거
-     */
-    @Deprecated(since = "2025-08-27", forRemoval = true)
-    public Tokens getTokensFromGoogleIdToken(OAuthIdTokenDTO request, DeviceType deviceType) {
-        String idToken = request.token();
+    // Apple Native Flow
+    public Tokens authenticateWithAppleIdToken(AppleNativeAuthDTO request, DeviceType deviceType) {
+        AppleTokenResponse appleResponse = appleOAuthClient.exchangeAuthorizationCode(request.authorizationCode());
 
-        OAuthRegisterDTO registerDTO = oidcTokenParser.parseGoogleIdToken(idToken, new GooglePersonInfo(null, null));
-        UserInfoDTO user = userService.registerOrLogin(registerDTO);
+        OidcTokenInfo tokenInfo = oidcTokenParser.parseAppleNativeIdToken(request.identityToken(), request.email(), request.name());
+        String refreshTokenValue = appleResponse.refreshToken();
+        Supplier<OAuthPersonInfo> supplier = () -> new OAuthPersonInfo(Gender.UNKNOWN, null);
+
+        UserInfoDTO user = userService.findOrCreateUser(tokenInfo, supplier, refreshTokenValue);
 
         return jwtService.generateTokens(user, deviceType);
     }
 
-    private OAuth2AccessTokenResponse getGoogleTokenResponse(String code, String codeVerifier, String redirectUri, DeviceType deviceType) {
-        String registrationId = "google-" + deviceType.name().toLowerCase();
-        ClientRegistration registration = clientRegistrationRepo.findByRegistrationId(registrationId);
+    // oauth 계정 연결 삭제
+    public void withdraw(String userExternalId) {
+        OAuthRevokeInfo revokeInfo = userService.withdraw(userExternalId);
 
-        if (registration == null) {
-            throw new IllegalStateException("Google OAuth " + registrationId + " not found.");
+        switch (revokeInfo.provider()) {
+            case GOOGLE -> googleOAuthClient.revokeToken(revokeInfo.oauthRefreshToken());
+            case APPLE  -> appleOAuthClient.revokeToken(revokeInfo.oauthRefreshToken());
         }
+    }
 
-        OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> accessTokenResponseClient =
-                new RestClientAuthorizationCodeTokenResponseClient();
+    private OAuth2AccessTokenResponse getTokenResponse(
+            OAuthProvider provider,
+            OAuthPkceDTO request,
+            DeviceType deviceType
+    ) {
+        ClientRegistration registration = resolveRegistration(provider, deviceType);
 
         OAuth2AuthorizationCodeGrantRequest grantRequest = new OAuth2AuthorizationCodeGrantRequest(
                 registration,
@@ -85,16 +94,46 @@ public class OAuthService {
                         OAuth2AuthorizationRequest.authorizationCode()
                                 .clientId(registration.getClientId())
                                 .authorizationUri(registration.getProviderDetails().getAuthorizationUri())
-                                .redirectUri(redirectUri)
-                                .attributes(Map.of(PkceParameterNames.CODE_VERIFIER, codeVerifier))
+                                .redirectUri(request.redirectUri())
+                                .attributes(Map.of(PkceParameterNames.CODE_VERIFIER, request.codeVerifier()))
                                 .build(),
-                        OAuth2AuthorizationResponse.success(code)
-                                .redirectUri(redirectUri)
+                        OAuth2AuthorizationResponse.success(request.code())
+                                .redirectUri(request.redirectUri())
                                 .build()
                 )
         );
 
+        RestClientAuthorizationCodeTokenResponseClient accessTokenResponseClient =
+                new RestClientAuthorizationCodeTokenResponseClient();
+
+        // Apple일 경우 client_secret 동적 주입
+        if (provider.equals(OAuthProvider.APPLE)) {
+            accessTokenResponseClient.setParametersCustomizer(parameters -> {
+                String appleClientSecret = appleOAuthClient.createAppleClientSecret(registration.getClientId());
+                parameters.set("client_secret", appleClientSecret);
+            });
+        }
+
         return accessTokenResponseClient.getTokenResponse(grantRequest);
+    }
+
+    private ClientRegistration resolveRegistration(OAuthProvider provider, DeviceType deviceType) {
+        String base = provider.name().toLowerCase();
+        String registrationId = provider == OAuthProvider.APPLE ? base : base + "-" + deviceType.name().toLowerCase();
+        ClientRegistration registration = clientRegistrationRepo.findByRegistrationId(registrationId);
+
+        if (registration == null) {
+            throw new IllegalStateException(provider.name() + " OAuth " + registrationId + " not found.");
+        }
+
+        return registration;
+    }
+
+    private OAuthPersonInfo resolvePersonInfo(OAuthProvider provider, OAuth2AccessToken accessToken) {
+        return switch (provider) {
+            case GOOGLE -> googleOAuthClient.getPersonInfo(accessToken);
+            case APPLE -> new OAuthPersonInfo(Gender.UNKNOWN, null);
+        };
     }
 
 }
