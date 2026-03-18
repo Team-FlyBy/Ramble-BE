@@ -1,5 +1,6 @@
 package com.flyby.ramble.user.model;
 
+import com.flyby.ramble.auth.util.EncryptConverter;
 import com.flyby.ramble.common.model.BaseEntity;
 import com.flyby.ramble.common.model.OAuthProvider;
 import jakarta.persistence.*;
@@ -57,7 +58,8 @@ public class User extends BaseEntity {
     @Column(name = "provider_id", nullable = false)
     private String providerId;
 
-    @Column(name = "refresh_token", length = 1024)
+    @Column(name = "oauth_refresh_token", length = 1024)
+    @Convert(converter = EncryptConverter.class)
     private String oauthRefreshToken;
 
     @Builder
