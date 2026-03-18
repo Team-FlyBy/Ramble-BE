@@ -45,11 +45,12 @@ public class OAuthService {
 
         OAuth2AccessToken accessToken = tokenResponse.getAccessToken();
         OAuth2RefreshToken refreshToken = tokenResponse.getRefreshToken();
-        String idToken = tokenResponse.getAdditionalParameters().get("id_token").toString();
+        Object idTokenObj = tokenResponse.getAdditionalParameters().get("id_token");
+        if (idTokenObj == null) {
+            throw new IllegalStateException("ID token not found in token response");
+        }
 
-        log.debug("idToken: {}", idToken);
-
-        OidcTokenInfo tokenInfo = oidcTokenParser.parseIdToken(provider, idToken);
+        OidcTokenInfo tokenInfo = oidcTokenParser.parseIdToken(provider, idTokenObj.toString());
         String oauthRefreshToken = refreshToken != null ? refreshToken.getTokenValue() : null;
         Supplier<OAuthPersonInfo> supplier = () -> resolvePersonInfo(provider, accessToken);
 
