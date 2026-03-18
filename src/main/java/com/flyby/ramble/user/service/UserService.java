@@ -55,7 +55,6 @@ public class UserService {
             User existingUser = optionalUser.get();
 
             if (oauthRefreshToken != null) {
-                log.info("refresh token: {}", oauthRefreshToken);
                 existingUser.updateOauthRefreshToken(oauthRefreshToken);
             }
 
