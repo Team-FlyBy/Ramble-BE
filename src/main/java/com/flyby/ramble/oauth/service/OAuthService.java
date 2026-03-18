@@ -76,9 +76,15 @@ public class OAuthService {
     public void withdraw(String userExternalId) {
         OAuthRevokeInfo revokeInfo = userService.withdraw(userExternalId);
 
-        switch (revokeInfo.provider()) {
-            case GOOGLE -> googleOAuthClient.revokeToken(revokeInfo.oauthRefreshToken());
-            case APPLE  -> appleOAuthClient.revokeToken(revokeInfo.oauthRefreshToken());
+        try {
+            switch (revokeInfo.provider()) {
+                case GOOGLE -> googleOAuthClient.revokeToken(revokeInfo.oauthRefreshToken());
+                case APPLE  -> appleOAuthClient.revokeToken(revokeInfo.oauthRefreshToken());
+            }
+        } catch (Exception e) {
+            // oauth 연결 해제가 실패해도 탈퇴 과정은 진행되어야 함
+            log.warn("OAuth token revoke failed during withdrawal (provider={}): {}",
+                    revokeInfo.provider(), e.getMessage());
         }
     }
 

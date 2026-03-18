@@ -21,6 +21,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -75,14 +76,17 @@ public class AppleOAuthClient {
     }
 
     public void revokeToken(String token) {
-        try {
-            doRevokeToken(token, oauthProperties.getClientId());
-        } catch (Exception e) {
-            log.warn("Apple token revoke failed with clientId, retrying with serviceId", e);
+        List<String> clientIds = List.of(
+                oauthProperties.getClientId(),
+                oauthProperties.getServiceId()
+        );
+
+        for (String clientId : clientIds) {
             try {
-                doRevokeToken(token, oauthProperties.getServiceId());
-            } catch (Exception ex) {
-                log.error("Failed to revoke Apple OAuth token with both clientId and serviceId", ex);
+                doRevokeToken(token, clientId);
+                return; // 성공 시 즉시 반환
+            } catch (Exception e) {
+                log.warn("Apple token revoke failed with clientId {}: {}", clientId, e.getMessage());
             }
         }
     }
