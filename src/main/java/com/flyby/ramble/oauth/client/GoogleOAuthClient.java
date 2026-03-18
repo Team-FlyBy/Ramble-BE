@@ -26,7 +26,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class GoogleOAuthClient {
     private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     /**
      * Google People API를 통해 사용자의 성별과 생년월일 정보를 가져옴
