@@ -2,7 +2,9 @@ package com.flyby.ramble.user.service;
 
 import com.flyby.ramble.common.exception.BaseException;
 import com.flyby.ramble.common.exception.ErrorCode;
-import com.flyby.ramble.oauth.dto.OAuthRegisterDTO;
+import com.flyby.ramble.oauth.dto.OAuthPersonInfo;
+import com.flyby.ramble.oauth.dto.OAuthRevokeInfo;
+import com.flyby.ramble.oauth.dto.OidcTokenInfo;
 import com.flyby.ramble.user.dto.UserInfoDTO;
 import com.flyby.ramble.user.model.User;
 import com.flyby.ramble.user.repository.UserRepository;
@@ -15,14 +17,15 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 @Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class UserService {
-
     private final UserRepository userRepository;
 
     public User getUserProxyById(Long userId) {
@@ -30,7 +33,7 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "user", key = "#userExternalId", unless = "#result == null")
+    @Cacheable(cacheNames = "user", key = "#userExternalId", unless = "#result == null")
     public UserInfoDTO getUserByExternalId(String userExternalId) {
         UUID externalId;
         try {
@@ -44,32 +47,58 @@ public class UserService {
                 .orElseThrow(() -> new BaseException(ErrorCode.USER_NOT_FOUND));
     }
 
-    @CachePut(value = "user", key = "#result.externalId", unless = "#result == null")
-    public UserInfoDTO registerOrLogin(OAuthRegisterDTO oAuthRegisterDTO) {
-        try {
-            return userRepository.findByProviderAndProviderId(oAuthRegisterDTO.provider(), oAuthRegisterDTO.providerId())
-                    .map(UserInfoDTO::from)
-                    .orElseGet(() -> UserInfoDTO.from(userRepository.save(
-                            User.builder()
-                                    .email(oAuthRegisterDTO.email())
-                                    .username(oAuthRegisterDTO.username())
-                                    .provider(oAuthRegisterDTO.provider())
-                                    .providerId(oAuthRegisterDTO.providerId())
-                                    .gender(oAuthRegisterDTO.gender())
-                                    .birthDate(oAuthRegisterDTO.birthDate())
-                                    .build()))
-                    );
-        } catch (DataIntegrityViolationException e) {
-            throw new IllegalArgumentException("예상치 못한 오류가 발생했습니다", e);
+    @CachePut(cacheNames = "user", key = "#result.externalId", unless = "#result == null")
+    public UserInfoDTO findOrCreateUser(OidcTokenInfo tokenInfo, Supplier<OAuthPersonInfo> personInfoSupplier, String oauthRefreshToken) {
+        Optional<User> optionalUser = userRepository.findByProviderAndProviderId(tokenInfo.provider(), tokenInfo.providerId());
+
+        if (optionalUser.isPresent()) {
+            User existingUser = optionalUser.get();
+
+            if (oauthRefreshToken != null) {
+                existingUser.updateOauthRefreshToken(oauthRefreshToken);
+            }
+
+            return UserInfoDTO.from(existingUser);
         }
+
+        OAuthPersonInfo personInfo = personInfoSupplier.get();
+        return registerUser(tokenInfo, personInfo, oauthRefreshToken);
     }
 
-    @CacheEvict(value = "user", key = "#userExternalId")
-    public void withdraw(String userExternalId) {
+    @CacheEvict(cacheNames = "user", key = "#userExternalId")
+    public OAuthRevokeInfo withdraw(String userExternalId) {
         User user = userRepository.findByExternalId(UUID.fromString(userExternalId))
                 .orElseThrow(() -> new BaseException(ErrorCode.USER_NOT_FOUND));
 
+        OAuthRevokeInfo revokeInfo = new OAuthRevokeInfo(user.getProvider(), user.getOauthRefreshToken());
         userRepository.save(user.anonymize());
+
+        return revokeInfo;
+    }
+
+    private UserInfoDTO registerUser(OidcTokenInfo tokenInfo, OAuthPersonInfo personInfo, String oauthRefreshToken) {
+        try {
+            User newUser = User.builder()
+                    .email(tokenInfo.email())
+                    .username(tokenInfo.username())
+                    .provider(tokenInfo.provider())
+                    .providerId(tokenInfo.providerId())
+                    .gender(personInfo.gender())
+                    .birthDate(personInfo.birthDate())
+                    .build();
+
+            if (oauthRefreshToken != null) {
+                newUser.updateOauthRefreshToken(oauthRefreshToken);
+            }
+
+            return UserInfoDTO.from(userRepository.save(newUser));
+        } catch (DataIntegrityViolationException e) {
+            // 동시 요청으로 유저가 이미 생성된 경우 재조회
+            log.warn("동시 유저 생성 감지, 재조회 시도: provider={}, providerId={}", tokenInfo.provider(), tokenInfo.providerId());
+            return userRepository.findByProviderAndProviderId(tokenInfo.provider(), tokenInfo.providerId())
+                    .map(UserInfoDTO::from)
+                    .orElseThrow(() -> new BaseException(ErrorCode.UNEXPECTED_SERVER_ERROR));
+        }
     }
 
 }

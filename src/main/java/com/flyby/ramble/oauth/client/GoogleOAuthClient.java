@@ -1,14 +1,17 @@
-package com.flyby.ramble.oauth.service;
+package com.flyby.ramble.oauth.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.flyby.ramble.oauth.dto.GooglePersonInfo;
+import com.flyby.ramble.oauth.constants.OAuthConstants;
+import com.flyby.ramble.oauth.dto.OAuthPersonInfo;
 import com.flyby.ramble.user.model.Gender;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -19,30 +22,25 @@ import java.util.Optional;
 import java.util.Set;
 
 @Slf4j
-@Service
+@Component
 @RequiredArgsConstructor
-public class GooglePeopleApiService {
-
-    private static final String PEOPLE_API_URL = "https://people.googleapis.com/v1/people/me";
-    private static final String SCOPE_BIRTHDAY = "https://www.googleapis.com/auth/user.birthday.read";
-    private static final String SCOPE_GENDER   = "https://www.googleapis.com/auth/user.gender.read";
-
+public class GoogleOAuthClient {
     private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     /**
      * Google People API를 통해 사용자의 성별과 생년월일 정보를 가져옴
      * scope에 따라 사용 가능한 정보만 반환
      */
-    public GooglePersonInfo getPersonInfo(OAuth2AccessToken accessToken) {
+    public OAuthPersonInfo getPersonInfo(OAuth2AccessToken accessToken) {
         Set<String> scopes = accessToken.getScopes();
         Optional<String> personFields = buildPersonFields(scopes);
 
         if (personFields.isEmpty()) {
-            return new GooglePersonInfo(Gender.UNKNOWN, null);
+            return new OAuthPersonInfo(Gender.UNKNOWN, null);
         }
 
-        String url = UriComponentsBuilder.fromUriString(PEOPLE_API_URL)
+        String url = UriComponentsBuilder.fromUriString(OAuthConstants.GOOGLE_PEOPLE_API_URL)
                 .queryParam("personFields", personFields.get())
                 .queryParam("sources", "READ_SOURCE_TYPE_PROFILE")
                 .build(true)
@@ -63,15 +61,31 @@ public class GooglePeopleApiService {
             log.error("Failed to fetch person info from Google People API", e);
         }
 
-        return new GooglePersonInfo(Gender.UNKNOWN, null);
+        return new OAuthPersonInfo(Gender.UNKNOWN, null);
+    }
+
+    public void revokeToken(String token) {
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("token", token);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
+
+        try {
+            restTemplate.postForEntity(OAuthConstants.GOOGLE_REVOKE_URL, request, String.class);
+        } catch (Exception e) {
+            log.error("Failed to revoke Google OAuth token", e);
+        }
     }
 
     private boolean hasGenderScope(Set<String> scopes)   {
-        return scopes.contains(SCOPE_GENDER);
+        return scopes.contains(OAuthConstants.GOOGLE_SCOPE_GENDER);
     }
 
     private boolean hasBirthdayScope(Set<String> scopes) {
-        return scopes.contains(SCOPE_BIRTHDAY);
+        return scopes.contains(OAuthConstants.GOOGLE_SCOPE_BIRTHDAY);
     }
 
     private Optional<String> buildPersonFields(Set<String> scopes) {
@@ -82,16 +96,16 @@ public class GooglePeopleApiService {
         return fields.isEmpty() ? Optional.empty() : Optional.of(String.join(",", fields));
     }
 
-    private GooglePersonInfo parsePersonInfo(String responseBody, Set<String> scopes) {
+    private OAuthPersonInfo parsePersonInfo(String responseBody, Set<String> scopes) {
         try {
             JsonNode root = objectMapper.readTree(responseBody);
             String gender = extractGender(root, scopes);
             LocalDate birthDate = extractBirthDate(root, scopes);
 
-            return new GooglePersonInfo(Gender.from(gender), birthDate);
+            return new OAuthPersonInfo(Gender.from(gender), birthDate);
         } catch (Exception e) {
             log.error("Failed to parse person info response", e);
-            return new GooglePersonInfo(Gender.UNKNOWN, null);
+            return new OAuthPersonInfo(Gender.UNKNOWN, null);
         }
     }
 

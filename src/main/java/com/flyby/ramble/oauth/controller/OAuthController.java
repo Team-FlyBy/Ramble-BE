@@ -5,7 +5,8 @@ import com.flyby.ramble.auth.util.CookieUtil;
 import com.flyby.ramble.common.annotation.SwaggerApi;
 import com.flyby.ramble.common.constants.JwtConstants;
 import com.flyby.ramble.common.model.DeviceType;
-import com.flyby.ramble.oauth.dto.OAuthIdTokenDTO;
+import com.flyby.ramble.common.model.OAuthProvider;
+import com.flyby.ramble.oauth.dto.AppleNativeAuthDTO;
 import com.flyby.ramble.oauth.dto.OAuthPkceDTO;
 import com.flyby.ramble.oauth.service.OAuthService;
 import jakarta.validation.Valid;
@@ -29,36 +30,44 @@ public class OAuthController {
             summary = "구글 OAuth 로그인",
             description = "구글 OAuth 2.0 인증을 통해 로그인 또는 회원가입을 처리하는 API",
             responseCode = "204",
-            responseDescription = "No Content",
-            content = {}
+            responseDescription = "No Content"
     )
-    public ResponseEntity<Void> login(@RequestHeader(JwtConstants.HEADER_DEVICE_TYPE) String deviceType,
-                                      @Valid @RequestBody OAuthPkceDTO request) {
-        Tokens tokens   = oAuthService.getTokensFromGoogleUser(request, DeviceType.from(deviceType));
-        String accToken = JwtConstants.TOKEN_PREFIX + tokens.accToken();
-        String refToken = cookieUtil.createResponseCookie(tokens.refToken()).toString();
+    public ResponseEntity<Void> googleLogin(@RequestHeader(JwtConstants.HEADER_DEVICE_TYPE) String deviceType,
+                                            @Valid @RequestBody OAuthPkceDTO request) {
+        Tokens tokens = oAuthService.authenticateWithAuthCode(OAuthProvider.GOOGLE, request, DeviceType.from(deviceType));
 
-        return ResponseEntity.noContent()
-                .header(HttpHeaders.AUTHORIZATION, accToken)
-                .header(HttpHeaders.SET_COOKIE,    refToken)
-                .build();
+        return buildTokenResponse(tokens);
     }
 
-    /**
-     * @deprecated 추후 삭제 예정. 클라이언트 수정 후 제거
-     */
-    @Deprecated(since = "2025-08-27", forRemoval = true)
+    @PostMapping("/authorize/apple")
     @SwaggerApi(
-            summary = "구글 OAuth 모바일 로그인 (Deprecated)",
-            description = "구글 OAuth 2.0 인증을 통해 로그인 또는 회원가입을 처리하는 API (모바일)",
+            summary = "애플 OAuth Web 로그인",
+            description = "web 애플 OAuth 2.0 인증을 통해 로그인 또는 회원가입을 처리하는 API",
             responseCode = "204",
-            responseDescription = "No Content",
-            content = {}
+            responseDescription = "No Content"
     )
-    @PostMapping("/authorize/google/mobile")
-    public ResponseEntity<Void> login(@RequestHeader(JwtConstants.HEADER_DEVICE_TYPE) String deviceType,
-                                      @Valid @RequestBody OAuthIdTokenDTO request) {
-        Tokens tokens   = oAuthService.getTokensFromGoogleIdToken(request, DeviceType.from(deviceType));
+    public ResponseEntity<Void> appleLogin(@RequestHeader(JwtConstants.HEADER_DEVICE_TYPE) String deviceType,
+                                           @Valid @RequestBody OAuthPkceDTO request) {
+        Tokens tokens = oAuthService.authenticateWithAuthCode(OAuthProvider.APPLE, request, DeviceType.from(deviceType));
+
+        return buildTokenResponse(tokens);
+    }
+
+    @PostMapping("/authorize/apple/native")
+    @SwaggerApi(
+            summary = "애플 OAuth Native 로그인",
+            description = "ios 기기 애플 OAuth 2.0 인증을 통해 로그인 또는 회원가입을 처리하는 API",
+            responseCode = "204",
+            responseDescription = "No Content"
+    )
+    public ResponseEntity<Void> appleNativeLogin(@RequestHeader(JwtConstants.HEADER_DEVICE_TYPE) String deviceType,
+                                                 @Valid @RequestBody AppleNativeAuthDTO request) {
+        Tokens tokens = oAuthService.authenticateWithAppleIdToken(request, DeviceType.from(deviceType));
+
+        return buildTokenResponse(tokens);
+    }
+
+    private ResponseEntity<Void> buildTokenResponse(Tokens tokens) {
         String accToken = JwtConstants.TOKEN_PREFIX + tokens.accToken();
         String refToken = cookieUtil.createResponseCookie(tokens.refToken()).toString();
 

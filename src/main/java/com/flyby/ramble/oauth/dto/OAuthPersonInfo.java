@@ -4,7 +4,7 @@ import com.flyby.ramble.user.model.Gender;
 
 import java.time.LocalDate;
 
-public record GooglePersonInfo(
+public record OAuthPersonInfo(
         Gender gender,
         LocalDate birthDate
 ) {

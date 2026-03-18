@@ -34,6 +34,8 @@ storage:
     secret-key: ${STORAGE_SECRET_KEY}
 
 encryption:
+  db:
+    key: ${DB_ENCRYPTION_KEY}
   user-snapshot:
     public-key: ${USER_SNAPSHOT_ENCRYPTION_PUBLIC_KEY}
 

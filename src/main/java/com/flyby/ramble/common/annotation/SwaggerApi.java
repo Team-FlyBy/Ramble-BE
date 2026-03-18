@@ -1,9 +1,6 @@
 package com.flyby.ramble.common.annotation;
 
-import com.flyby.ramble.common.dto.ResponseDTO;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import org.springframework.core.annotation.AliasFor;
 
@@ -34,7 +31,6 @@ import java.lang.annotation.Target;
  * <p>
  *     <b>NOTE:</b> {@code responseCode} and {@code responseDescription} are optional.
  * </p>
- * * content는 추후 수정될 수 있음
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
@@ -52,16 +48,5 @@ public @interface SwaggerApi {
 
     @AliasFor(annotation = ApiResponse.class, attribute = "description")
     String responseDescription() default "OK";
-
-    @AliasFor(annotation = ApiResponse.class, attribute = "content")
-    Content[] content() default {
-            @Content(
-                    mediaType = "application/json",
-                    schema = @Schema(implementation = ResponseDTO.class)
-            )
-    };
-
-    // TODO: implementation만 지정 가능한지 조사
-    //  Class<?> implementationClass() default Void.class; <-- 이 방식은 추가적인 작업이 필요함
 
 }
